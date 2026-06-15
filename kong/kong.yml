@@ -1,0 +1,151 @@
+_format_version: "3.0"
+_transform: true
+
+# Smart-Cost Multi-LLM Orchestrator
+# Kong Gateway routes prompts to the cheapest model that can handle the task.
+#
+# Flow:
+#   Browser -> Kong :8000/v1/chat/completions
+#     -> pre-function plugin classifies the prompt (simple vs complex)
+#     -> sets X-LLM-Tier + X-Model headers
+#     -> proxies to smart-router service
+#   smart-router -> OpenAI gpt-4o-mini  (simple)
+#               -> Anthropic claude-3-5-sonnet  (complex)
+
+services:
+  - name: smart-router-service
+    host: smart-router
+    port: 8080
+    protocol: http
+    connect_timeout: 10000
+    read_timeout: 60000
+    write_timeout: 60000
+
+    routes:
+      - name: chat-completions-route
+        paths:
+          - /v1/chat/completions
+        methods:
+          - POST
+          - OPTIONS
+        strip_path: false
+        preserve_host: false
+
+    plugins:
+      # -----------------------------------------------------------------------
+      # CORS — allow the browser frontend to call Kong directly
+      # -----------------------------------------------------------------------
+      - name: cors
+        config:
+          origins:
+            - "*"
+          methods:
+            - POST
+            - GET
+            - OPTIONS
+          headers:
+            - Content-Type
+            - Authorization
+          exposed_headers:
+            - X-LLM-Tier
+            - X-Model
+            - X-Prompt-Length
+          max_age: 3600
+          credentials: false
+
+      # -----------------------------------------------------------------------
+      # Smart-Cost Classifier — Kong reads the prompt and picks the right model
+      # -----------------------------------------------------------------------
+      - name: pre-function
+        config:
+          access:
+            - |
+              -- ================================================================
+              -- Smart-Cost Prompt Classifier
+              -- Classifies each incoming prompt as "simple" or "complex" and
+              -- sets routing headers before the request hits the LLM backend.
+              -- ================================================================
+
+              -- Short-circuit OPTIONS pre-flight
+              if kong.request.get_method() == "OPTIONS" then return end
+
+              -- Buffer the request body so we can read it without consuming it
+              ngx.req.read_body()
+              local body_data = ngx.req.get_body_data()
+
+              -- Default to simple when body is absent or unreadable
+              local function set_tier(tier, model, reason)
+                kong.service.request.set_header("X-LLM-Tier", tier)
+                kong.service.request.set_header("X-Model", model)
+                kong.service.request.set_header("X-Classifier-Reason", reason)
+                kong.log.info("[SmartCost] tier=" .. tier .. " model=" .. model .. " reason=" .. reason)
+              end
+
+              if not body_data or body_data == "" then
+                set_tier("simple", "gpt-4o-mini", "empty-body")
+                return
+              end
+
+              -- Parse JSON
+              local ok, parsed = pcall(require("cjson").decode, body_data)
+              if not ok or type(parsed) ~= "table" then
+                set_tier("simple", "gpt-4o-mini", "parse-error")
+                return
+              end
+
+              -- Concatenate all user message content into one string
+              local prompt = ""
+              local messages = parsed.messages or {}
+              for _, msg in ipairs(messages) do
+                if msg.role == "user" and type(msg.content) == "string" then
+                  prompt = prompt .. msg.content .. " "
+                end
+              end
+
+              -- ----------------------------------------------------------------
+              -- Keyword-based complexity classifier
+              -- Signals that indicate a heavy reasoning / coding task:
+              -- ----------------------------------------------------------------
+              local complex_signals = {
+                -- Coding & debugging
+                "debug", "bug", "error", "exception", "traceback",
+                "fix", "code", "script", "function", "class", "method",
+                "implement", "refactor", "write a program", "write code",
+                -- Deep reasoning
+                "algorithm", "optimize", "performance", "complexity",
+                "architecture", "design pattern", "system design",
+                -- Technical explanation
+                "explain how", "how does", "why does", "step by step",
+                "in detail", "deep dive",
+                -- Security / data
+                "security", "vulnerability", "sql", "database", "api",
+                "endpoint", "schema", "migration",
+                -- Analysis
+                "analyze", "compare", "evaluate", "pros and cons",
+              }
+
+              local t = string.lower(prompt)
+              for _, signal in ipairs(complex_signals) do
+                if string.find(t, signal, 1, true) then
+                  set_tier("complex", "claude-3-5-sonnet-20241022", "keyword:" .. signal)
+                  return
+                end
+              end
+
+              -- Long prompts also suggest complexity (> 400 chars)
+              if #prompt > 400 then
+                set_tier("complex", "claude-3-5-sonnet-20241022", "long-prompt:" .. #prompt)
+                return
+              end
+
+              -- Everything else is lightweight — send to the cheap model
+              set_tier("simple", "gpt-4o-mini", "default")
+
+      # -----------------------------------------------------------------------
+      # Rate limiting — protect LLM backends from abuse
+      # -----------------------------------------------------------------------
+      - name: rate-limiting
+        config:
+          minute: 30
+          policy: local
+          error_message: "Rate limit exceeded — please slow down."

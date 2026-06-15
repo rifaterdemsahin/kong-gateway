@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Smart-Cost Multi-LLM Orchestrator</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3348;
+    --text: #e2e8f0;
+    --muted: #7c8cb0;
+    --simple-color: #22c55e;
+    --complex-color: #f59e0b;
+    --simple-bg: #052e16;
+    --complex-bg: #451a03;
+    --accent: #6366f1;
+    --accent-hover: #818cf8;
+    --user-bg: #1e3a5f;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Header ── */
+  header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .logo {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--accent), #a855f7);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  header h1 { font-size: 17px; font-weight: 600; letter-spacing: -0.3px; }
+  header p { font-size: 12px; color: var(--muted); margin-top: 1px; }
+  .kong-badge {
+    margin-left: auto;
+    background: #003471;
+    border: 1px solid #0052cc;
+    color: #60a5fa;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.3px;
+  }
+
+  /* ── Main layout ── */
+  main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── Chat panel ── */
+  .chat-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  #messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .message {
+    display: flex;
+    flex-direction: column;
+    max-width: 75%;
+    gap: 6px;
+  }
+  .message.user { align-self: flex-end; align-items: flex-end; }
+  .message.assistant { align-self: flex-start; align-items: flex-start; }
+
+  .bubble {
+    padding: 12px 16px;
+    border-radius: 16px;
+    line-height: 1.55;
+    font-size: 14px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .message.user .bubble {
+    background: var(--user-bg);
+    border-bottom-right-radius: 4px;
+  }
+  .message.assistant .bubble {
+    background: var(--surface2);
+    border-bottom-left-radius: 4px;
+    border: 1px solid var(--border);
+  }
+
+  .model-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 12px;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+  }
+  .model-badge.simple {
+    background: var(--simple-bg);
+    color: var(--simple-color);
+    border: 1px solid #166534;
+  }
+  .model-badge.complex {
+    background: var(--complex-bg);
+    color: var(--complex-color);
+    border: 1px solid #92400e;
+  }
+  .model-badge .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .cost-pill {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .cost-pill .saved { color: var(--simple-color); font-weight: 600; }
+
+  /* typing indicator */
+  .typing-dots {
+    display: flex; gap: 4px; padding: 14px 18px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    border-bottom-left-radius: 4px;
+    width: fit-content;
+  }
+  .typing-dots span {
+    width: 7px; height: 7px;
+    background: var(--muted);
+    border-radius: 50%;
+    animation: bounce 1.2s infinite;
+  }
+  .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce {
+    0%, 60%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-6px); }
+  }
+
+  /* ── Input bar ── */
+  .input-bar {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  #prompt {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-size: 14px;
+    padding: 10px 14px;
+    outline: none;
+    resize: none;
+    height: 44px;
+    max-height: 120px;
+    font-family: inherit;
+    transition: border-color 0.15s;
+  }
+  #prompt:focus { border-color: var(--accent); }
+  #prompt::placeholder { color: var(--muted); }
+
+  #send-btn {
+    background: var(--accent);
+    border: none;
+    border-radius: 10px;
+    color: #fff;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 0 20px;
+    height: 44px;
+    transition: background 0.15s;
+    white-space: nowrap;
+  }
+  #send-btn:hover { background: var(--accent-hover); }
+  #send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* ── Stats sidebar ── */
+  .stats-panel {
+    width: 280px;
+    border-left: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .stats-header {
+    padding: 14px 18px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .stats-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .stat-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+  }
+  .stat-card .label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 6px;
+  }
+  .stat-card .value {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+  .stat-card .sub {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 3px;
+  }
+  .stat-card.green .value { color: var(--simple-color); }
+  .stat-card.amber .value { color: var(--complex-color); }
+
+  .route-log {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .route-log .label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 4px;
+  }
+  .route-entry {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .route-entry .re-model { font-weight: 600; }
+  .route-entry.simple .re-model { color: var(--simple-color); }
+  .route-entry.complex .re-model { color: var(--complex-color); }
+  .route-entry .re-reason { color: var(--muted); font-size: 11px; }
+  .route-entry .re-cost { color: var(--muted); font-size: 11px; }
+
+  .empty-state {
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+    padding: 20px 0;
+  }
+
+  /* ── Example prompts ── */
+  .examples {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 0 24px 20px;
+  }
+  .examples-label {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .example-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .chip {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    color: var(--text);
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .chip:hover { border-color: var(--accent); background: #1e2035; }
+  .chip.simple-chip { border-color: #166534; color: var(--simple-color); }
+  .chip.complex-chip { border-color: #92400e; color: var(--complex-color); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">K</div>
+  <div>
+    <h1>Smart-Cost Multi-LLM Orchestrator</h1>
+    <p>Kong Gateway routes each prompt to the most cost-effective model automatically</p>
+  </div>
+  <span class="kong-badge">Kong Gateway</span>
+</header>
+
+<main>
+  <!-- Chat panel -->
+  <div class="chat-panel">
+    <div id="messages">
+      <div class="message assistant" id="welcome-msg">
+        <div class="bubble">
+          Welcome! I'm the <strong>Smart-Cost Orchestrator</strong>.<br><br>
+          Send any message — Kong Gateway will inspect your prompt and silently route it to:
+          <ul style="margin: 10px 0 0 18px; line-height: 2;">
+            <li><strong style="color:#22c55e">gpt-4o-mini</strong> for lightweight tasks (summaries, Q&amp;A, translations)</li>
+            <li><strong style="color:#f59e0b">Claude 3.5 Sonnet</strong> for complex tasks (code, debugging, analysis)</li>
+          </ul>
+          <br>Try the example prompts below, or type your own.
+        </div>
+      </div>
+    </div>
+
+    <div class="examples">
+      <div class="examples-label">Try these examples:</div>
+      <div class="example-chips">
+        <span class="chip simple-chip" onclick="sendExample(this.textContent)">Summarize a paragraph</span>
+        <span class="chip simple-chip" onclick="sendExample(this.textContent)">Translate 'Hello' to French</span>
+        <span class="chip simple-chip" onclick="sendExample(this.textContent)">What is the capital of Japan?</span>
+        <span class="chip complex-chip" onclick="sendExample(this.textContent)">Debug this Python script: def add(a, b): return a - b</span>
+        <span class="chip complex-chip" onclick="sendExample(this.textContent)">Explain how a binary search tree works step by step</span>
+        <span class="chip complex-chip" onclick="sendExample(this.textContent)">Analyze the performance of a bubble sort algorithm</span>
+      </div>
+    </div>
+
+    <div class="input-bar">
+      <textarea id="prompt" placeholder="Type a message..." rows="1"></textarea>
+      <button id="send-btn" onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+
+  <!-- Stats sidebar -->
+  <div class="stats-panel">
+    <div class="stats-header">Routing Analytics</div>
+    <div class="stats-body">
+      <div class="stat-card green">
+        <div class="label">Total Saved</div>
+        <div class="value" id="stat-saved">$0.00</div>
+        <div class="sub" id="stat-saved-sub">vs. always using Claude</div>
+      </div>
+
+      <div style="display:flex; gap:10px;">
+        <div class="stat-card" style="flex:1">
+          <div class="label">Simple</div>
+          <div class="value" id="stat-simple" style="font-size:20px;">0</div>
+          <div class="sub">gpt-4o-mini</div>
+        </div>
+        <div class="stat-card amber" style="flex:1">
+          <div class="label">Complex</div>
+          <div class="value" id="stat-complex" style="font-size:20px;">0</div>
+          <div class="sub">claude-3-5-sonnet</div>
+        </div>
+      </div>
+
+      <div class="route-log">
+        <div class="label">Routing History</div>
+        <div id="route-log-entries">
+          <div class="empty-state">No requests yet</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+const KONG_URL = 'http://localhost:8000/v1/chat/completions';
+
+let stats = { simple: 0, complex: 0, totalSaved: 0, totalCost: 0 };
+let routeLog = [];
+
+function sendExample(text) {
+  document.getElementById('prompt').value = text;
+  sendMessage();
+}
+
+async function sendMessage() {
+  const ta = document.getElementById('prompt');
+  const text = ta.value.trim();
+  if (!text) return;
+
+  ta.value = '';
+  ta.style.height = '44px';
+
+  appendMessage('user', text);
+  const typingEl = appendTyping();
+
+  document.getElementById('send-btn').disabled = true;
+
+  try {
+    const res = await fetch(KONG_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'smart-cost',
+        messages: [{ role: 'user', content: text }]
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`${res.status}: ${err}`);
+    }
+
+    const data = await res.json();
+    const content = data.choices?.[0]?.message?.content ?? '(no response)';
+    const sc = data.x_smart_cost ?? {};
+
+    typingEl.remove();
+    appendMessage('assistant', content, sc);
+    updateStats(sc);
+    addRouteLog(sc, text);
+  } catch (e) {
+    typingEl.remove();
+    appendMessage('assistant', `Error: ${e.message}\n\nMake sure the stack is running:\n  docker compose up --build`);
+  } finally {
+    document.getElementById('send-btn').disabled = false;
+  }
+}
+
+function appendMessage(role, content, sc) {
+  const msgs = document.getElementById('messages');
+  const msg = document.createElement('div');
+  msg.className = `message ${role}`;
+
+  let inner = `<div class="bubble">${escHtml(content)}</div>`;
+
+  if (role === 'assistant' && sc && sc.tier) {
+    const tier = sc.tier;
+    const label = sc.model_used_label ?? sc.model_used ?? tier;
+    inner += `<div class="model-badge ${tier}"><span class="dot"></span>${label}</div>`;
+    if (sc.savings_usd > 0) {
+      inner += `<div class="cost-pill">Cost: $${fmt(sc.cost_usd)} · <span class="saved">Saved $${fmt(sc.savings_usd)} (${sc.savings_pct}%)</span> vs ${sc.alternative_model}</div>`;
+    } else {
+      inner += `<div class="cost-pill">Cost: $${fmt(sc.cost_usd)} · ${sc.input_tokens ?? '?'} in + ${sc.output_tokens ?? '?'} out tokens</div>`;
+    }
+  }
+
+  msg.innerHTML = inner;
+  msgs.appendChild(msg);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function appendTyping() {
+  const msgs = document.getElementById('messages');
+  const wrap = document.createElement('div');
+  wrap.className = 'message assistant';
+  wrap.innerHTML = `<div class="typing-dots"><span></span><span></span><span></span></div>`;
+  msgs.appendChild(wrap);
+  msgs.scrollTop = msgs.scrollHeight;
+  return wrap;
+}
+
+function updateStats(sc) {
+  if (!sc || !sc.tier) return;
+  stats[sc.tier] = (stats[sc.tier] ?? 0) + 1;
+  stats.totalSaved += sc.savings_usd ?? 0;
+  stats.totalCost += sc.cost_usd ?? 0;
+
+  document.getElementById('stat-simple').textContent = stats.simple;
+  document.getElementById('stat-complex').textContent = stats.complex;
+  document.getElementById('stat-saved').textContent = `$${fmt(stats.totalSaved, 6)}`;
+  document.getElementById('stat-saved-sub').textContent =
+    `Total spent: $${fmt(stats.totalCost, 6)}`;
+}
+
+function addRouteLog(sc, prompt) {
+  if (!sc || !sc.tier) return;
+  routeLog.unshift({ sc, prompt: prompt.slice(0, 40) + (prompt.length > 40 ? '…' : '') });
+
+  const container = document.getElementById('route-log-entries');
+  container.innerHTML = routeLog.slice(0, 8).map(({ sc: s, prompt: p }) => `
+    <div class="route-entry ${s.tier}">
+      <div class="re-model">${s.model_used_label ?? s.model_used}</div>
+      <div class="re-reason">Reason: ${s.classifier_reason ?? s.tier}</div>
+      <div class="re-cost">"${p}" · $${fmt(s.cost_usd)}</div>
+    </div>
+  `).join('');
+}
+
+function fmt(n, decimals = 8) {
+  if (n == null || isNaN(n)) return '0.00';
+  if (n === 0) return '0.00';
+  if (n < 0.000001) return n.toFixed(decimals);
+  if (n < 0.01) return n.toFixed(6);
+  return n.toFixed(4);
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Auto-resize textarea
+document.getElementById('prompt').addEventListener('input', function() {
+  this.style.height = '44px';
+  this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+});
+document.getElementById('prompt').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+</script>
+</body>
+</html>

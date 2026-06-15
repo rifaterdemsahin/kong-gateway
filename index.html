@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Smart-Cost Multi-LLM Orchestrator — Kong Gateway PoC</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3348;
+    --text: #e2e8f0;
+    --muted: #7c8cb0;
+    --simple: #22c55e;
+    --complex: #f59e0b;
+    --accent: #6366f1;
+    --code-bg: #12141f;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+  }
+
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* ── Hero ── */
+  .hero {
+    background: linear-gradient(160deg, #0f1117 0%, #1a1530 50%, #0f1117 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 72px 24px 60px;
+    text-align: center;
+  }
+  .hero .kbadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #1e2235;
+    border: 1px solid #3b4270;
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #818cf8;
+    letter-spacing: 0.5px;
+    margin-bottom: 24px;
+  }
+  .hero .kbadge .dot { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; }
+  .hero h1 {
+    font-size: clamp(28px, 5vw, 52px);
+    font-weight: 800;
+    letter-spacing: -1.5px;
+    line-height: 1.1;
+    margin-bottom: 20px;
+  }
+  .hero h1 span { color: var(--accent); }
+  .hero p {
+    font-size: 18px;
+    color: var(--muted);
+    max-width: 600px;
+    margin: 0 auto 36px;
+    line-height: 1.6;
+  }
+  .hero-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .btn {
+    padding: 11px 24px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    text-decoration: none;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #818cf8; text-decoration: none; }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { border-color: var(--accent); text-decoration: none; }
+
+  /* ── Layout ── */
+  .container { max-width: 900px; margin: 0 auto; padding: 0 24px; }
+
+  section { padding: 64px 0; border-bottom: 1px solid var(--border); }
+  section:last-child { border-bottom: none; }
+
+  h2 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+  }
+  .section-label {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .section-sub { color: var(--muted); font-size: 16px; margin-bottom: 36px; }
+
+  /* ── Problem / Value ── */
+  .value-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+  .value-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+  }
+  .value-card .icon { font-size: 28px; margin-bottom: 12px; }
+  .value-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+  .value-card p { font-size: 14px; color: var(--muted); line-height: 1.6; }
+
+  /* ── Architecture flow ── */
+  .flow {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 32px;
+    margin-top: 32px;
+  }
+  .flow-steps { display: flex; flex-direction: column; gap: 0; }
+  .flow-step {
+    display: flex;
+    gap: 20px;
+    position: relative;
+    padding-bottom: 28px;
+  }
+  .flow-step:last-child { padding-bottom: 0; }
+  .step-left { display: flex; flex-direction: column; align-items: center; width: 40px; flex-shrink: 0; }
+  .step-num {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: var(--surface2);
+    border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; color: var(--accent);
+    flex-shrink: 0;
+    z-index: 1;
+  }
+  .step-line { flex: 1; width: 2px; background: var(--border); margin-top: 6px; }
+  .flow-step:last-child .step-line { display: none; }
+  .step-body { padding-top: 6px; flex: 1; }
+  .step-body h4 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .step-body p { font-size: 14px; color: var(--muted); }
+  .step-body .tag {
+    display: inline-block;
+    background: #1e2235;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-family: monospace;
+    color: #a5b4fc;
+    margin-top: 6px;
+  }
+
+  /* ── Routing decision table ── */
+  .routing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 28px; }
+  .route-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+  }
+  .route-card .tier-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 700; padding: 4px 12px;
+    border-radius: 20px; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .tier-badge.simple { background: #052e16; color: var(--simple); border: 1px solid #166534; }
+  .tier-badge.complex { background: #451a03; color: var(--complex); border: 1px solid #92400e; }
+  .tier-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .route-card h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+  .route-card .model-name { font-size: 13px; color: var(--muted); font-family: monospace; margin-bottom: 12px; }
+  .route-card ul { padding-left: 18px; }
+  .route-card ul li { font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  .route-card .cost { font-size: 12px; color: var(--muted); margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .route-card .cost strong { color: var(--text); }
+
+  /* ── Code blocks ── */
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.7;
+    font-family: "SF Mono", "Fira Code", monospace;
+    margin-top: 20px;
+    color: #c9d1d9;
+  }
+  pre .comment { color: #6b7a99; }
+  pre .keyword { color: #ff7b72; }
+  pre .string { color: #a5d6ff; }
+  pre .fn { color: #d2a8ff; }
+  pre .var { color: #ffa657; }
+  code {
+    font-family: "SF Mono", "Fira Code", monospace;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+    color: #a5b4fc;
+  }
+
+  /* ── Cost comparison ── */
+  .cost-bar-section { margin-top: 28px; }
+  .cost-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 20px; }
+  .cost-row .cr-label { font-size: 13px; font-weight: 600; display: flex; justify-content: space-between; }
+  .cr-label .cr-model { color: var(--muted); font-weight: 400; font-size: 12px; }
+  .bar-track {
+    background: var(--surface2);
+    border-radius: 6px;
+    height: 10px;
+    overflow: hidden;
+  }
+  .bar-fill { height: 100%; border-radius: 6px; }
+  .bar-fill.simple { background: var(--simple); width: 4%; }
+  .bar-fill.complex { background: var(--complex); width: 100%; }
+  .cost-savings-note {
+    background: #052e16;
+    border: 1px solid #166534;
+    border-radius: 10px;
+    padding: 16px 20px;
+    font-size: 14px;
+    color: var(--simple);
+    margin-top: 12px;
+  }
+
+  /* ── Components section ── */
+  .component-list { display: flex; flex-direction: column; gap: 16px; margin-top: 24px; }
+  .component-item {
+    display: flex;
+    gap: 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .component-icon {
+    width: 42px; height: 42px;
+    border-radius: 10px;
+    background: var(--surface2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .component-body h3 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .component-body .port { font-family: monospace; font-size: 12px; color: var(--accent); }
+  .component-body p { font-size: 13px; color: var(--muted); margin-top: 6px; }
+
+  /* ── Quick start ── */
+  .qs-steps { display: flex; flex-direction: column; gap: 16px; margin-top: 24px; }
+  .qs-step { display: flex; gap: 14px; }
+  .qs-num {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--accent); color: #fff;
+    font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 2px;
+  }
+  .qs-step p { font-size: 14px; }
+  .qs-step p strong { color: var(--text); }
+  .qs-step p span { color: var(--muted); }
+
+  /* ── Footer ── */
+  footer {
+    padding: 40px 24px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+    border-top: 1px solid var(--border);
+  }
+
+  @media (max-width: 640px) {
+    .routing-grid { grid-template-columns: 1fr; }
+    .value-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Hero ── -->
+<div class="hero">
+  <div class="kbadge"><span class="dot"></span> Built with Kong Gateway</div>
+  <h1>The <span>Smart-Cost</span><br>Multi-LLM Orchestrator</h1>
+  <p>
+    An intelligent API gateway that automatically routes every user prompt to the
+    most cost-effective LLM — completely invisible to your frontend application.
+  </p>
+  <div class="hero-buttons">
+    <a href="frontend/index.html" class="btn btn-primary">Open Chat Demo</a>
+    <a href="https://github.com/rifaterdemsahin/kong-gateway" class="btn btn-secondary">View on GitHub</a>
+  </div>
+</div>
+
+<!-- ── The Problem ── -->
+<section>
+  <div class="container">
+    <div class="section-label">The Problem</div>
+    <h2>LLM costs spiral out of control fast</h2>
+    <p class="section-sub">
+      Most teams pick one model and send every request to it — paying premium prices
+      for tasks that a fraction of the cost could handle just as well.
+    </p>
+
+    <div class="value-grid">
+      <div class="value-card">
+        <div class="icon">💸</div>
+        <h3>Uniform pricing, variable complexity</h3>
+        <p>
+          Asking "What's the capital of France?" costs the same as "Debug this 200-line
+          Python script" when you hard-code a single model. That's wasteful.
+        </p>
+      </div>
+      <div class="value-card">
+        <div class="icon">🔀</div>
+        <h3>Routing logic buried in app code</h3>
+        <p>
+          Teams that do try to optimise embed routing logic directly in their applications,
+          coupling cost decisions to business code across every service.
+        </p>
+      </div>
+      <div class="value-card">
+        <div class="icon">📉</div>
+        <h3>No visibility into per-request cost</h3>
+        <p>
+          Without a centralised gateway, there's no single place to observe, audit, or
+          enforce cost policies — making cost control nearly impossible at scale.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── The Solution ── -->
+<section>
+  <div class="container">
+    <div class="section-label">The Solution</div>
+    <h2>Kong classifies every prompt before it reaches any LLM</h2>
+    <p class="section-sub">
+      A single Lua plugin inside Kong Gateway inspects the request body, scores
+      the prompt's complexity, and silently rewrites which model handles it.
+      Your frontend sends one standard OpenAI-compatible request — Kong does the rest.
+    </p>
+
+    <div class="flow">
+      <div class="flow-steps">
+
+        <div class="flow-step">
+          <div class="step-left"><div class="step-num">1</div><div class="step-line"></div></div>
+          <div class="step-body">
+            <h4>Browser sends a standard chat request</h4>
+            <p>The frontend posts to <code>POST /v1/chat/completions</code> on Kong (port 8000)
+            with a normal OpenAI-format JSON body. It has no idea which model will respond.</p>
+            <span class="tag">Content-Type: application/json</span>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="step-left"><div class="step-num">2</div><div class="step-line"></div></div>
+          <div class="step-body">
+            <h4>Kong's pre-function Lua plugin classifies the prompt</h4>
+            <p>
+              Before forwarding the request, Kong runs a small Lua script that:
+            </p>
+            <ul style="margin: 8px 0 0 16px; color: var(--muted); font-size: 14px;">
+              <li>Buffers and parses the JSON request body</li>
+              <li>Extracts the user's message text</li>
+              <li>Matches it against a keyword list (debug, code, algorithm, analyze…)</li>
+              <li>Falls back to length-based scoring (&gt; 400 chars = complex)</li>
+            </ul>
+            <span class="tag">X-LLM-Tier: simple | complex</span>
+            <span class="tag" style="margin-left:6px">X-Model: gpt-4o-mini | claude-3-5-sonnet</span>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="step-left"><div class="step-num">3</div><div class="step-line"></div></div>
+          <div class="step-body">
+            <h4>Kong proxies to the Smart Router service</h4>
+            <p>
+              Kong forwards the enriched request (with the classification headers it just set)
+              to the internal <strong>Smart Router</strong> microservice. Kong also enforces
+              rate limiting (30 req/min) and handles CORS for the browser.
+            </p>
+            <span class="tag">Rate-Limiting: 30/min</span>
+            <span class="tag" style="margin-left:6px">CORS: *</span>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="step-left"><div class="step-num">4</div><div class="step-line"></div></div>
+          <div class="step-body">
+            <h4>Smart Router calls the right LLM API</h4>
+            <p>
+              The FastAPI Smart Router reads <code>X-LLM-Tier</code> from the Kong headers
+              and dispatches to the appropriate backend:
+            </p>
+            <ul style="margin: 8px 0 0 16px; color: var(--muted); font-size: 14px;">
+              <li><strong style="color:var(--simple)">Simple</strong> → OpenAI <code>gpt-4o-mini</code></li>
+              <li><strong style="color:var(--complex)">Complex</strong> → Anthropic <code>claude-3-5-sonnet-20241022</code></li>
+            </ul>
+            <span class="tag">OpenAI API / Anthropic API</span>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="step-left"><div class="step-num">5</div><div class="step-line"></div></div>
+          <div class="step-body">
+            <h4>Response returns with cost metadata</h4>
+            <p>
+              The response travels back through Kong to the browser in standard
+              OpenAI format, augmented with an <code>x_smart_cost</code> field
+              showing the model used, token counts, actual cost, and how much was
+              saved vs. always using the expensive model.
+            </p>
+            <span class="tag">x_smart_cost: &#123; tier, cost_usd, savings_usd, savings_pct &#125;</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Routing Logic ── -->
+<section>
+  <div class="container">
+    <div class="section-label">Routing Logic</div>
+    <h2>How Kong decides which model to use</h2>
+    <p class="section-sub">
+      The classifier is a 50-line Lua script inside a Kong <code>pre-function</code> plugin —
+      no external service, no added latency, no deployment overhead.
+    </p>
+
+    <div class="routing-grid">
+      <div class="route-card">
+        <div class="tier-badge simple"><span class="dot"></span>Simple Tier</div>
+        <h3>Lightweight tasks</h3>
+        <div class="model-name">gpt-4o-mini</div>
+        <ul>
+          <li>Summaries &amp; rewrites</li>
+          <li>Factual Q&amp;A</li>
+          <li>Translation</li>
+          <li>Classification</li>
+          <li>Sentiment analysis</li>
+          <li>Short creative tasks</li>
+        </ul>
+        <div class="cost">
+          <strong>$0.00015</strong> / 1K input tokens<br>
+          <strong>$0.0006</strong> / 1K output tokens
+        </div>
+      </div>
+
+      <div class="route-card">
+        <div class="tier-badge complex"><span class="dot"></span>Complex Tier</div>
+        <h3>Heavy reasoning tasks</h3>
+        <div class="model-name">claude-3-5-sonnet-20241022</div>
+        <ul>
+          <li>Debugging &amp; code review</li>
+          <li>Algorithm design</li>
+          <li>Architecture decisions</li>
+          <li>Multi-step analysis</li>
+          <li>Security evaluation</li>
+          <li>Deep technical explanation</li>
+        </ul>
+        <div class="cost">
+          <strong>$0.003</strong> / 1K input tokens<br>
+          <strong>$0.015</strong> / 1K output tokens
+        </div>
+      </div>
+    </div>
+
+    <p style="color:var(--muted); font-size:13px; margin-top:20px;">
+      <strong style="color:var(--text)">Trigger keywords</strong> that promote a prompt to the complex tier:
+      <code>debug</code> <code>bug</code> <code>error</code> <code>fix</code> <code>code</code>
+      <code>script</code> <code>function</code> <code>class</code> <code>implement</code>
+      <code>refactor</code> <code>algorithm</code> <code>optimize</code> <code>architecture</code>
+      <code>design pattern</code> <code>explain how</code> <code>how does</code>
+      <code>analyze</code> <code>performance</code> <code>security</code> <code>database</code>
+      <code>sql</code> <code>api</code> — or any prompt longer than 400 characters.
+    </p>
+  </div>
+</section>
+
+<!-- ── Cost Impact ── -->
+<section>
+  <div class="container">
+    <div class="section-label">Cost Impact</div>
+    <h2>Up to 95% cheaper for routine tasks</h2>
+    <p class="section-sub">
+      For a typical workload where 70% of prompts are routine, Smart-Cost routing
+      cuts your monthly LLM bill by roughly 75% with zero change to your application code.
+    </p>
+
+    <div class="cost-bar-section">
+      <div class="cost-row">
+        <div class="cr-label">
+          Simple task (100 tokens in, 150 out)
+          <span class="cr-model">gpt-4o-mini</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill simple"></div></div>
+        <div style="font-size:12px; color:var(--simple); margin-top:4px;">$0.000105 per request</div>
+      </div>
+
+      <div class="cost-row">
+        <div class="cr-label">
+          Same task without Smart-Cost routing
+          <span class="cr-model">claude-3-5-sonnet</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill complex"></div></div>
+        <div style="font-size:12px; color:var(--complex); margin-top:4px;">$0.002550 per request</div>
+      </div>
+
+      <div class="cost-savings-note">
+        Routing that one request correctly saves <strong>$0.002445</strong> — a <strong>95.9% reduction</strong>.
+        At 100,000 simple requests/day that's <strong>$244.50 saved daily</strong> ($7,335/month).
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Components ── -->
+<section>
+  <div class="container">
+    <div class="section-label">Components</div>
+    <h2>What's inside this PoC</h2>
+    <p class="section-sub">Four Docker containers, one <code>docker compose up</code>.</p>
+
+    <div class="component-list">
+      <div class="component-item">
+        <div class="component-icon">K</div>
+        <div class="component-body">
+          <h3>Kong Gateway <span class="port">:8000 (proxy) · :8001 (admin)</span></h3>
+          <p>
+            Runs in <strong>DB-less mode</strong> using a declarative <code>kong/kong.yml</code> config.
+            Hosts the <code>pre-function</code> Lua classifier plugin, the CORS plugin, and rate
+            limiting. No database required — all configuration is version-controlled YAML.
+          </p>
+        </div>
+      </div>
+
+      <div class="component-item">
+        <div class="component-icon">R</div>
+        <div class="component-body">
+          <h3>Smart Router (FastAPI) <span class="port">:8080</span></h3>
+          <p>
+            A lightweight Python service that reads the <code>X-LLM-Tier</code> and
+            <code>X-Model</code> headers set by Kong, then calls the appropriate LLM API
+            (OpenAI or Anthropic). In <strong>MOCK_MODE</strong> (default) it returns
+            realistic simulated responses with full cost breakdowns — no API keys needed.
+          </p>
+        </div>
+      </div>
+
+      <div class="component-item">
+        <div class="component-icon">UI</div>
+        <div class="component-body">
+          <h3>Chat Frontend (Nginx) <span class="port">:3000</span></h3>
+          <p>
+            A single-page chat interface that sends all requests to Kong in standard
+            OpenAI format. Displays a colour-coded model badge on each response
+            (green = gpt-4o-mini, amber = claude-3-5-sonnet) and a live cost analytics
+            sidebar showing savings per request and cumulative totals.
+          </p>
+        </div>
+      </div>
+
+      <div class="component-item">
+        <div class="component-icon">L</div>
+        <div class="component-body">
+          <h3>Lua Classifier (Kong pre-function plugin)</h3>
+          <p>
+            Embedded directly in <code>kong/kong.yml</code>. Runs in the Kong request
+            access phase — before the request leaves the gateway. Reads the raw request body
+            via <code>ngx.req.read_body()</code>, parses JSON, scores the prompt, and sets
+            routing headers. Total overhead: sub-millisecond.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── The Lua Classifier ── -->
+<section>
+  <div class="container">
+    <div class="section-label">Key Code</div>
+    <h2>The Lua classifier (inside Kong)</h2>
+    <p class="section-sub">
+      This snippet lives inside <code>kong/kong.yml</code> as the <code>pre-function</code>
+      plugin's access phase script. Kong executes it on every inbound request.
+    </p>
+
+<pre><span class="comment">-- 1. Buffer the request body (required to read it in Kong)</span>
+ngx.req.read_body()
+<span class="var">local</span> body_data = ngx.req.get_body_data()
+
+<span class="comment">-- 2. Parse JSON and extract the user's prompt text</span>
+<span class="var">local</span> ok, parsed = pcall(require(<span class="string">"cjson"</span>).decode, body_data)
+<span class="var">local</span> prompt = <span class="string">""</span>
+<span class="keyword">for</span> _, msg <span class="keyword">in</span> ipairs(parsed.messages) <span class="keyword">do</span>
+  <span class="keyword">if</span> msg.role == <span class="string">"user"</span> <span class="keyword">then</span> prompt = prompt .. msg.content .. <span class="string">" "</span> <span class="keyword">end</span>
+<span class="keyword">end</span>
+
+<span class="comment">-- 3. Keyword-based complexity classifier</span>
+<span class="var">local</span> complex_signals = {
+  <span class="string">"debug"</span>, <span class="string">"bug"</span>, <span class="string">"error"</span>, <span class="string">"fix"</span>, <span class="string">"code"</span>, <span class="string">"script"</span>, <span class="string">"function"</span>,
+  <span class="string">"implement"</span>, <span class="string">"refactor"</span>, <span class="string">"algorithm"</span>, <span class="string">"optimize"</span>, <span class="string">"architecture"</span>,
+  <span class="string">"explain how"</span>, <span class="string">"how does"</span>, <span class="string">"analyze"</span>, <span class="string">"performance"</span>, <span class="string">"security"</span>,
+}
+<span class="var">local</span> t = string.lower(prompt)
+<span class="keyword">for</span> _, signal <span class="keyword">in</span> ipairs(complex_signals) <span class="keyword">do</span>
+  <span class="keyword">if</span> string.find(t, signal, 1, <span class="keyword">true</span>) <span class="keyword">then</span>
+    kong.service.request.set_header(<span class="string">"X-LLM-Tier"</span>, <span class="string">"complex"</span>)
+    kong.service.request.set_header(<span class="string">"X-Model"</span>, <span class="string">"claude-3-5-sonnet-20241022"</span>)
+    <span class="keyword">return</span>
+  <span class="keyword">end</span>
+<span class="keyword">end</span>
+
+<span class="comment">-- 4. Default: lightweight → cheap model</span>
+kong.service.request.set_header(<span class="string">"X-LLM-Tier"</span>, <span class="string">"simple"</span>)
+kong.service.request.set_header(<span class="string">"X-Model"</span>, <span class="string">"gpt-4o-mini"</span>)</pre>
+  </div>
+</section>
+
+<!-- ── Quick Start ── -->
+<section>
+  <div class="container">
+    <div class="section-label">Quick Start</div>
+    <h2>Up and running in under 2 minutes</h2>
+    <p class="section-sub">No API keys required in mock mode.</p>
+
+    <div class="qs-steps">
+      <div class="qs-step">
+        <div class="qs-num">1</div>
+        <div>
+          <p><strong>Clone the repo</strong></p>
+          <pre style="margin-top:8px">git clone https://github.com/rifaterdemsahin/kong-gateway.git
+cd kong-gateway</pre>
+        </div>
+      </div>
+      <div class="qs-step">
+        <div class="qs-num">2</div>
+        <div>
+          <p><strong>Start the stack</strong> <span>(Docker required)</span></p>
+          <pre style="margin-top:8px">./setup.sh
+<span class="comment"># or: docker compose up --build</span></pre>
+        </div>
+      </div>
+      <div class="qs-step">
+        <div class="qs-num">3</div>
+        <div>
+          <p><strong>Open the chat UI</strong></p>
+          <pre style="margin-top:8px">open http://localhost:3000</pre>
+        </div>
+      </div>
+      <div class="qs-step">
+        <div class="qs-num">4</div>
+        <div>
+          <p><strong>Use real LLM APIs</strong> <span>(optional)</span></p>
+          <pre style="margin-top:8px"><span class="comment"># Edit .env:</span>
+MOCK_MODE=false
+OPENAI_API_KEY=sk-...
+ANTHROPIC_API_KEY=sk-ant-...
+
+docker compose restart smart-router</pre>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:32px; display:flex; gap:12px; flex-wrap:wrap;">
+      <a href="frontend/index.html" class="btn btn-primary">Open Chat Demo</a>
+      <a href="http://localhost:8001/services" class="btn btn-secondary">Kong Admin API</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  Smart-Cost Multi-LLM Orchestrator &mdash; Kong Gateway PoC &mdash;
+  <a href="https://github.com/rifaterdemsahin/kong-gateway">github.com/rifaterdemsahin/kong-gateway</a>
+</footer>
+
+</body>
+</html>
