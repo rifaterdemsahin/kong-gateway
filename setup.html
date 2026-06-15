@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Deployment Guide — Fly.io vs Azure — Smart-Cost Kong Gateway</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3348;
+    --text: #e2e8f0;
+    --muted: #7c8cb0;
+    --accent: #6366f1;
+    --green: #22c55e;
+    --amber: #f59e0b;
+    --red: #ef4444;
+    --blue: #3b82f6;
+    --code-bg: #12141f;
+    --fly: #8b5cf6;
+    --azure: #0078d4;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* ── Nav ── */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(15,17,23,0.92); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px; display: flex; align-items: center; height: 52px;
+  }
+  .nav-logo { font-size: 15px; font-weight: 700; color: var(--text); margin-right: 28px; text-decoration: none; }
+  .nav-logo:hover { color: var(--accent); text-decoration: none; }
+  .nav-links { display: flex; gap: 4px; flex: 1; flex-wrap: wrap; }
+  .nav-link { padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--muted); text-decoration: none; white-space: nowrap; }
+  .nav-link:hover { background: var(--surface2); color: var(--text); text-decoration: none; }
+  .nav-link.active { background: var(--surface2); color: var(--text); }
+  .nav-actions { margin-left: auto; flex-shrink: 0; }
+  .nav-btn { padding: 5px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; background: var(--accent); color: #fff; text-decoration: none; display: inline-block; }
+  .nav-btn:hover { background: #818cf8; text-decoration: none; }
+
+  /* ── Hero ── */
+  .hero {
+    background: linear-gradient(160deg, #0f1117 0%, #1a1530 50%, #0f1117 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 64px 24px 52px; text-align: center;
+  }
+  .hero .badge { display: inline-flex; align-items: center; gap: 6px; background: #1e2235; border: 1px solid #3b4270; border-radius: 20px; padding: 4px 14px; font-size: 12px; font-weight: 600; color: #818cf8; letter-spacing: 0.5px; margin-bottom: 22px; }
+  .hero h1 { font-size: clamp(26px, 4.5vw, 46px); font-weight: 800; letter-spacing: -1.2px; line-height: 1.15; margin-bottom: 18px; }
+  .hero h1 em { font-style: normal; color: var(--accent); }
+  .hero p { font-size: 17px; color: var(--muted); max-width: 600px; margin: 0 auto 32px; }
+  .toc { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .toc a { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 6px 14px; font-size: 13px; color: var(--muted); }
+  .toc a:hover { border-color: var(--accent); color: var(--text); text-decoration: none; }
+
+  /* ── Layout ── */
+  .container { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+  section { padding: 60px 0; border-bottom: 1px solid var(--border); }
+  section:last-of-type { border-bottom: none; }
+  .section-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); margin-bottom: 8px; }
+  h2 { font-size: 26px; font-weight: 700; letter-spacing: -0.4px; margin-bottom: 8px; }
+  h3 { font-size: 18px; font-weight: 600; margin-bottom: 10px; }
+  .section-sub { color: var(--muted); font-size: 15px; margin-bottom: 32px; }
+  p { margin-bottom: 14px; }
+  p:last-child { margin-bottom: 0; }
+
+  code { font-family: "SF Mono", "Fira Code", monospace; background: var(--surface2); border: 1px solid var(--border); padding: 1px 6px; border-radius: 4px; font-size: 12px; color: #a5b4fc; }
+
+  pre {
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 20px 24px; overflow-x: auto; font-size: 13px; line-height: 1.7;
+    font-family: "SF Mono", "Fira Code", monospace; color: #c9d1d9; margin: 16px 0;
+    position: relative;
+  }
+  .pre-label {
+    position: absolute; top: -1px; right: 16px;
+    background: var(--surface2); border: 1px solid var(--border); border-top: none;
+    border-radius: 0 0 6px 6px; padding: 1px 10px; font-size: 11px; color: var(--muted);
+    font-family: sans-serif;
+  }
+  pre .c  { color: #6b7a99; }
+  pre .k  { color: #ff7b72; }
+  pre .s  { color: #a5d6ff; }
+  pre .v  { color: #ffa657; }
+  pre .fn { color: #d2a8ff; }
+  pre .kw { color: #79c0ff; }
+
+  /* ── Comparison table ── */
+  .compare-table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 24px; }
+  .compare-table th { padding: 12px 16px; text-align: left; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); border-bottom: 2px solid var(--border); }
+  .compare-table th.fly-col  { color: var(--fly); }
+  .compare-table th.az-col   { color: var(--azure); }
+  .compare-table td { padding: 13px 16px; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.55; }
+  .compare-table tr:last-child td { border-bottom: none; }
+  .compare-table tr:hover td { background: var(--surface2); }
+  .compare-table .row-label { font-weight: 600; color: var(--muted); font-size: 12px; white-space: nowrap; }
+  .win { color: var(--green); font-weight: 600; }
+  .neutral { color: var(--amber); }
+  .lose { color: var(--red); }
+
+  /* ── Platform header cards ── */
+  .platform-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 28px; }
+  .platform-card { border-radius: 12px; padding: 24px; border: 2px solid; }
+  .platform-card.fly   { border-color: var(--fly);   background: #1a1530; }
+  .platform-card.azure { border-color: var(--azure); background: #0a1628; }
+  .platform-card .pc-name { font-size: 18px; font-weight: 800; margin-bottom: 4px; }
+  .platform-card.fly   .pc-name { color: var(--fly); }
+  .platform-card.azure .pc-name { color: var(--azure); }
+  .platform-card .pc-tagline { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+  .platform-card ul { padding-left: 16px; }
+  .platform-card li { font-size: 13px; color: var(--muted); margin-bottom: 5px; }
+  .platform-card li strong { color: var(--text); }
+
+  /* ── Step-by-step ── */
+  .steps { display: flex; flex-direction: column; gap: 0; }
+  .step { display: flex; gap: 18px; padding-bottom: 28px; }
+  .step:last-child { padding-bottom: 0; }
+  .step-left { display: flex; flex-direction: column; align-items: center; width: 34px; flex-shrink: 0; }
+  .step-num { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; z-index: 1; flex-shrink: 0; }
+  .step-num.fly   { background: #2e1f5e; border: 2px solid var(--fly);   color: var(--fly); }
+  .step-num.azure { background: #0a2040; border: 2px solid var(--azure); color: var(--azure); }
+  .step-line { flex: 1; width: 2px; background: var(--border); margin-top: 6px; }
+  .step:last-child .step-line { display: none; }
+  .step-body { padding-top: 4px; flex: 1; min-width: 0; }
+  .step-body h4 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+  .step-body p  { font-size: 14px; color: var(--muted); margin-bottom: 8px; }
+  .step-body p:last-child { margin-bottom: 0; }
+
+  /* ── Cost breakdown ── */
+  .cost-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 24px; }
+  .cost-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 22px; }
+  .cost-card .cc-platform { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 16px; }
+  .cost-card.fly   .cc-platform { color: var(--fly); }
+  .cost-card.azure .cc-platform { color: var(--azure); }
+  .cost-line { display: flex; justify-content: space-between; font-size: 13px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .cost-line:last-of-type { border-bottom: none; }
+  .cost-line .cl-item { color: var(--muted); }
+  .cost-line .cl-price { font-weight: 600; }
+  .cost-total { display: flex; justify-content: space-between; font-size: 15px; font-weight: 700; padding-top: 14px; margin-top: 6px; border-top: 2px solid var(--border); }
+
+  /* ── Recommendation ── */
+  .rec-card {
+    border-radius: 14px; padding: 28px; margin-top: 28px;
+    border: 2px solid var(--fly); background: #1a1530;
+  }
+  .rec-card.azure-rec { border-color: var(--azure); background: #0a1628; }
+  .rec-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 10px; }
+  .rec-card.fly-rec   h3 { color: var(--fly); }
+  .rec-card.azure-rec h3 { color: var(--azure); }
+  .rec-card p { font-size: 14px; color: var(--muted); margin-bottom: 10px; }
+  .rec-card p strong { color: var(--text); }
+
+  /* ── Info/warning boxes ── */
+  .info-box  { background: #1e2035; border: 1px solid #3b4270; border-radius: 10px; padding: 16px 20px; font-size: 14px; color: var(--muted); margin: 16px 0; }
+  .warn-box  { background: #451a03; border: 1px solid #92400e; border-radius: 10px; padding: 16px 20px; font-size: 14px; color: var(--amber); margin: 16px 0; }
+  .ok-box    { background: #052e16; border: 1px solid #166534; border-radius: 10px; padding: 16px 20px; font-size: 14px; color: var(--green);  margin: 16px 0; }
+  .info-box strong, .warn-box strong, .ok-box strong { color: var(--text); }
+
+  /* ── Section divider with platform label ── */
+  .platform-divider {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 32px; margin-top: 8px;
+  }
+  .platform-divider .pd-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    border-radius: 8px; padding: 6px 16px; font-size: 14px; font-weight: 700;
+    white-space: nowrap;
+  }
+  .pd-badge.fly   { background: #2e1f5e; color: var(--fly);   border: 1px solid var(--fly); }
+  .pd-badge.azure { background: #0a2040; color: var(--azure); border: 1px solid var(--azure); }
+  .platform-divider .pd-line { flex: 1; height: 1px; background: var(--border); }
+
+  footer { padding: 40px 24px; text-align: center; color: var(--muted); font-size: 13px; border-top: 1px solid var(--border); }
+
+  @media (max-width: 640px) {
+    .platform-grid { grid-template-columns: 1fr; }
+    .cost-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Nav ── -->
+<nav>
+  <a href="index.html" class="nav-logo">K Smart-Cost</a>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">Overview</a>
+    <a href="use-case.html" class="nav-link">My $40/mo Setup</a>
+    <a href="setup.html" class="nav-link active">Deploy</a>
+    <a href="frontend/index.html" class="nav-link">Live Demo</a>
+  </div>
+  <div class="nav-actions">
+    <a href="frontend/index.html" class="nav-btn">Open Chat</a>
+  </div>
+</nav>
+
+<!-- ── Hero ── -->
+<div class="hero">
+  <div class="badge">Deployment Guide</div>
+  <h1>Fly.io vs Azure — <em>Side by Side</em></h1>
+  <p>
+    Full step-by-step deployment for both platforms, with a real cost breakdown
+    and maintenance comparison so you can pick the right home for your Kong gateway.
+  </p>
+  <div class="toc">
+    <a href="#comparison">Quick Comparison</a>
+    <a href="#fly">Fly.io Setup</a>
+    <a href="#azure">Azure Setup</a>
+    <a href="#cost">Cost Breakdown</a>
+    <a href="#maintenance">Maintenance</a>
+    <a href="#verdict">Verdict</a>
+  </div>
+</div>
+
+<!-- ── What you're deploying ── -->
+<section>
+  <div class="container">
+    <div class="section-label">What You're Deploying</div>
+    <h2>Three services, one stack</h2>
+    <p class="section-sub">
+      The Kong Smart-Cost stack consists of three containers that need to run
+      and talk to each other. Both platforms handle this, but in very different ways.
+    </p>
+
+    <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:24px; font-family:monospace; font-size:13px; line-height:2;">
+      <div style="color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:12px; font-family:sans-serif; font-weight:700;">Services</div>
+      <div><span style="color:var(--accent)">kong</span> <span style="color:var(--muted)">(kong:3.9)</span> &nbsp;— DB-less gateway, proxy :8000, admin :8001</div>
+      <div><span style="color:var(--green)">smart-router</span> <span style="color:var(--muted)">(custom FastAPI)</span> &nbsp;— LLM proxy :8080</div>
+      <div><span style="color:var(--amber)">frontend</span> <span style="color:var(--muted)">(nginx:alpine)</span> &nbsp;— static chat UI :80</div>
+      <div style="margin-top:12px; color:var(--muted); font-size:12px; font-family:sans-serif;">
+        Kong and smart-router must reach each other. Only Kong proxy (:8000) and frontend (:80) need public ingress.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Quick comparison ── -->
+<section id="comparison">
+  <div class="container">
+    <div class="section-label">Quick Comparison</div>
+    <h2>Fly.io vs Azure at a glance</h2>
+    <p class="section-sub">The short version before we go deep.</p>
+
+    <div class="platform-grid">
+      <div class="platform-card fly">
+        <div class="pc-name">Fly.io</div>
+        <div class="pc-tagline">Developer-first. Deploy in minutes.</div>
+        <ul>
+          <li><strong>Setup time:</strong> ~20 minutes</li>
+          <li><strong>Monthly cost:</strong> ~$12–18</li>
+          <li><strong>CLI-driven</strong> — one command per service</li>
+          <li><strong>Global edge</strong> — 35+ regions</li>
+          <li>No Kubernetes knowledge needed</li>
+          <li>Free tier covers basic PoC</li>
+        </ul>
+      </div>
+      <div class="platform-card azure">
+        <div class="pc-name">Azure</div>
+        <div class="pc-tagline">Enterprise-grade. More knobs, more power.</div>
+        <ul>
+          <li><strong>Setup time:</strong> ~45–60 minutes</li>
+          <li><strong>Monthly cost:</strong> ~$30–60</li>
+          <li><strong>Infrastructure-as-code</strong> via Bicep / ARM</li>
+          <li><strong>Full observability</strong> with Azure Monitor</li>
+          <li>Integrates with AD, Key Vault, VNet</li>
+          <li>Better SLAs and compliance certifications</li>
+        </ul>
+      </div>
+    </div>
+
+    <table class="compare-table" style="margin-top:28px;">
+      <thead>
+        <tr>
+          <th style="width:22%">Dimension</th>
+          <th class="fly-col" style="width:39%">Fly.io</th>
+          <th class="az-col" style="width:39%">Azure Container Apps</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="row-label">Setup complexity</td>
+          <td><span class="win">Low</span> — 3 CLI commands, one config file per service</td>
+          <td><span class="neutral">Medium</span> — Resource group, Container Registry, environment, 3 apps</td>
+        </tr>
+        <tr>
+          <td class="row-label">Time to first deploy</td>
+          <td><span class="win">~20 min</span></td>
+          <td><span class="neutral">~45–60 min</span></td>
+        </tr>
+        <tr>
+          <td class="row-label">Monthly cost (this stack)</td>
+          <td><span class="win">~$12–18/mo</span></td>
+          <td><span class="neutral">~$30–60/mo</span></td>
+        </tr>
+        <tr>
+          <td class="row-label">Scale to zero</td>
+          <td><span class="win">Yes</span> — machines stop when idle</td>
+          <td><span class="win">Yes</span> — Container Apps scale to 0</td>
+        </tr>
+        <tr>
+          <td class="row-label">Private networking</td>
+          <td><span class="win">Built-in</span> — Fly private network (6PN)</td>
+          <td><span class="win">Built-in</span> — VNet integration</td>
+        </tr>
+        <tr>
+          <td class="row-label">Secret management</td>
+          <td><span class="neutral">Fly secrets</span> (CLI-managed env vars)</td>
+          <td><span class="win">Azure Key Vault</span> — proper secret store with audit log</td>
+        </tr>
+        <tr>
+          <td class="row-label">Observability</td>
+          <td><span class="neutral">Basic</span> — fly logs, metrics dashboard</td>
+          <td><span class="win">Full</span> — Azure Monitor, Log Analytics, App Insights</td>
+        </tr>
+        <tr>
+          <td class="row-label">Custom domain + TLS</td>
+          <td><span class="win">One command</span> — fly certs add</td>
+          <td><span class="win">Supported</span> via Azure Front Door or Container Apps ingress</td>
+        </tr>
+        <tr>
+          <td class="row-label">Persistent volumes</td>
+          <td><span class="neutral">Fly volumes</span> (limited, block storage)</td>
+          <td><span class="win">Azure Files / Managed Disks</span></td>
+        </tr>
+        <tr>
+          <td class="row-label">Compliance / audit</td>
+          <td><span class="lose">Limited</span> — not suitable for regulated workloads</td>
+          <td><span class="win">SOC 2, ISO 27001, HIPAA, PCI DSS</span></td>
+        </tr>
+        <tr>
+          <td class="row-label">Maintenance burden</td>
+          <td><span class="win">Very low</span> — managed infra, auto patching</td>
+          <td><span class="neutral">Low–medium</span> — more config to maintain</td>
+        </tr>
+        <tr>
+          <td class="row-label">Best for</td>
+          <td>Personal use, PoC, indie dev, side projects</td>
+          <td>Team use, production, regulated industries, enterprise</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════ FLY.IO ══ -->
+<section id="fly">
+  <div class="container">
+    <div class="platform-divider">
+      <div class="pd-badge fly">Fly.io — Step-by-Step Deployment</div>
+      <div class="pd-line"></div>
+    </div>
+
+    <h3>Prerequisites</h3>
+    <p style="color:var(--muted); font-size:14px; margin-bottom:16px;">You need a Fly.io account (free tier works) and Docker installed locally.</p>
+
+<pre><span class="c"># Install Fly CLI</span>
+curl -L https://fly.io/install.sh | sh
+
+<span class="c"># Authenticate</span>
+fly auth login
+
+<span class="c"># Confirm it works</span>
+fly version
+</pre>
+
+    <div class="steps" style="margin-top:32px;">
+
+      <!-- Step 1 -->
+      <div class="step">
+        <div class="step-left"><div class="step-num fly">1</div><div class="step-line"></div></div>
+        <div class="step-body">
+          <h4>Create a Fly organisation and set secrets</h4>
+          <p>All three services share the same org. Secrets are set once per app — Fly injects them as environment variables at runtime. Your API keys never appear in code or config files.</p>
+<pre><span class="c"># Set API key secrets (replace with real values)</span>
+fly secrets set OPENAI_API_KEY=<span class="s">"sk-..."</span> \
+               ANTHROPIC_API_KEY=<span class="s">"sk-ant-..."</span> \
+               MOCK_MODE=<span class="s">"false"</span> \
+               --app smart-router   <span class="c"># (create the app first in step 3)</span>
+</pre>
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="step">
+        <div class="step-left"><div class="step-num fly">2</div><div class="step-line"></div></div>
+        <div class="step-body">
+          <h4>Deploy the Smart Router</h4>
+          <p>The Smart Router is a custom Docker image. Fly builds it from your <code>smart-router/</code> directory and deploys it to a private internal address — Kong talks to it over Fly's private 6PN network, so it never needs a public port.</p>
+<pre style="position:relative"><span class="pre-label">smart-router/fly.toml</span>
+<span class="v">app</span> = <span class="s">"smart-cost-router"</span>
+<span class="v">primary_region</span> = <span class="s">"lhr"</span>   <span class="c"># London — pick your closest region</span>
+
+[<span class="v">build</span>]
+  <span class="v">dockerfile</span> = <span class="s">"Dockerfile"</span>
+
+[<span class="v">http_service</span>]
+  <span class="v">internal_port</span> = <span class="kw">8080</span>
+  <span class="v">auto_stop_machines</span>  = <span class="kw">true</span>   <span class="c"># scale to zero when idle</span>
+  <span class="v">auto_start_machines</span> = <span class="kw">true</span>
+  <span class="v">min_machines_running</span> = <span class="kw">0</span>
+  <span class="v">force_https</span> = <span class="kw">true</span>
+
+[[<span class="v">vm</span>]]
+  <span class="v">size</span> = <span class="s">"shared-cpu-1x"</span>
+  <span class="v">memory</span> = <span class="s">"256mb"</span>
+</pre>
+<pre><span class="c"># Deploy from inside the smart-router/ directory</span>
+cd smart-router
+fly launch --name smart-cost-router --no-deploy
+fly secrets set OPENAI_API_KEY=<span class="s">"sk-..."</span> ANTHROPIC_API_KEY=<span class="s">"sk-ant-..."</span> MOCK_MODE=<span class="s">"false"</span>
+fly deploy
+
+<span class="c"># Note the internal hostname Fly assigns:</span>
+<span class="c"># smart-cost-router.internal</span>
+</pre>
+        </div>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="step">
+        <div class="step-left"><div class="step-num fly">3</div><div class="step-line"></div></div>
+        <div class="step-body">
+          <h4>Deploy Kong Gateway</h4>
+          <p>Kong runs in DB-less mode. Mount your <code>kong/kong.yml</code> via a Fly volume, and point Kong's upstream host at <code>smart-cost-router.internal</code> — the private DNS name Fly gives your router app. Update <code>kong/kong.yml</code> to use this hostname before deploying.</p>
+<pre style="position:relative"><span class="pre-label">kong/fly.toml</span>
+<span class="v">app</span> = <span class="s">"smart-cost-kong"</span>
+<span class="v">primary_region</span> = <span class="s">"lhr"</span>
+
+[<span class="v">build</span>]
+  <span class="v">image</span> = <span class="s">"kong:3.9"</span>
+
+[<span class="v">env</span>]
+  KONG_DATABASE          = <span class="s">"off"</span>
+  KONG_DECLARATIVE_CONFIG = <span class="s">"/kong/declarative/kong.yml"</span>
+  KONG_PROXY_LISTEN      = <span class="s">"0.0.0.0:8000"</span>
+  KONG_ADMIN_LISTEN      = <span class="s">"127.0.0.1:8001"</span>   <span class="c"># admin NOT public</span>
+  KONG_LOG_LEVEL         = <span class="s">"info"</span>
+  KONG_PLUGINS           = <span class="s">"bundled"</span>
+
+[[<span class="v">mounts</span>]]
+  source      = <span class="s">"kong_config"</span>
+  destination = <span class="s">"/kong/declarative"</span>
+
+[<span class="v">http_service</span>]
+  <span class="v">internal_port</span> = <span class="kw">8000</span>
+  <span class="v">force_https</span>   = <span class="kw">true</span>
+  <span class="v">auto_stop_machines</span>  = <span class="kw">false</span>   <span class="c"># keep Kong warm</span>
+  <span class="v">min_machines_running</span> = <span class="kw">1</span>
+
+[[<span class="v">vm</span>]]
+  <span class="v">size</span>   = <span class="s">"shared-cpu-1x"</span>
+  <span class="v">memory</span> = <span class="s">"512mb"</span>
+</pre>
+<pre><span class="c"># Edit kong/kong.yml: change host from "smart-router" to</span>
+<span class="c"># "smart-cost-router.internal"</span>
+sed -i <span class="s">'s/host: smart-router/host: smart-cost-router.internal/'</span> kong/kong.yml
+
+cd kong
+fly launch --name smart-cost-kong --no-deploy
+fly volumes create kong_config --size 1    <span class="c"># 1 GB volume for config</span>
+
+<span class="c"># Copy kong.yml into the volume via a one-off machine</span>
+fly machine run kong:3.9 \
+  --volume kong_config:/kong/declarative \
+  --command <span class="s">"sh -c 'cat > /kong/declarative/kong.yml'"</span> \
+  --stdin < kong.yml
+
+fly deploy
+</pre>
+        </div>
+      </div>
+
+      <!-- Step 4 -->
+      <div class="step">
+        <div class="step-left"><div class="step-num fly">4</div><div class="step-line"></div></div>
+        <div class="step-body">
+          <h4>Deploy the Frontend</h4>
+          <p>Update <code>frontend/index.html</code> to point to your Kong app's public URL (e.g. <code>https://smart-cost-kong.fly.dev</code>) instead of <code>localhost:8000</code> before deploying.</p>
+<pre style="position:relative"><span class="pre-label">frontend/fly.toml</span>
+<span class="v">app</span> = <span class="s">"smart-cost-ui"</span>
+<span class="v">primary_region</span> = <span class="s">"lhr"</span>
+
+[<span class="v">build</span>]
+  <span class="v">image</span> = <span class="s">"nginx:alpine"</span>
+
+[<span class="v">http_service</span>]
+  <span class="v">internal_port</span> = <span class="kw">80</span>
+  <span class="v">force_https</span>   = <span class="kw">true</span>
+  <span class="v">auto_stop_machines</span> = <span class="kw">true</span>
+  <span class="v">min_machines_running</span> = <span class="kw">0</span>
+
+[[<span class="v">vm</span>]]
+  <span class="v">size</span>   = <span class="s">"shared-cpu-1x"</span>
+  <span class="v">memory</span> = <span class="s">"128mb"</span>
+</pre>
+<pre><span class="c"># Replace localhost:8000 with your Kong Fly URL</span>
+KONG_URL=<span class="s">"https://smart-cost-kong.fly.dev"</span>
+sed -i <span class="s">"s|http://localhost:8000|$KONG_URL|g"</span> frontend/index.html
+
+cd frontend
+fly launch --name smart-cost-ui --no-deploy
+fly deploy
+</pre>
+        </div>
+      </div>
+
+      <!-- Step 5 -->
+      <div class="step">
+        <div class="step-left"><div class="step-num fly">5</div><div class="step-line"></div></div>
+        <div class="step-body">
+          <h4>Add a custom domain (optional)</h4>
+<pre><span class="c"># Add your domain to Kong (the public-facing app)</span>
+fly certs add api.yourdomain.com --app smart-cost-kong
+
+<span class="c"># Point your DNS CNAME to:</span>
+<span class="c"># smart-cost-kong.fly.dev</span>
+
+<span class="c"># Fly auto-provisions and renews TLS via Let's Encrypt</span>
+fly certs show api.yourdomain.com --app smart-cost-kong
+</pre>
+        </div>
+      </div>
+
+      <!-- Step 6 -->
+      <div class="step">
+        <div class="step-left"><div class="step-num fly">6</div><div class="step-line"></div></div>
+        <div class="step-body">
+          <h4>Verify everything works</h4>
+<pre><span class="c"># Check all apps are running</span>
+fly status --app smart-cost-router
+fly status --app smart-cost-kong
+fly status --app smart-cost-ui
+
+<span class="c"># Test the gateway end-to-end</span>
+curl -X POST https://smart-cost-kong.fly.dev/v1/chat/completions \
+  -H <span class="s">"Content-Type: application/json"</span> \
+  -d <span class="s">'{"model":"auto","messages":[{"role":"user","content":"Summarize Kong Gateway in one sentence."}]}'</span>
+
+<span class="c"># Tail logs from Kong to see classifier decisions</span>
+fly logs --app smart-cost-kong
+</pre>
+          <div class="ok-box" style="margin-top:8px;">Fly.io deployment complete. Total time: ~20 minutes.</div>
+        </div>
+      </div>
+
+    </div><!-- /steps -->
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════ AZURE ══ -->
+<section id="azure">
+  <div class="container">
+    <div class="platform-divider">
+      <div class="pd-badge azure">Azure — Step-by-Step Deployment</div>
+      <div class="pd-line"></div>
+    </div>
+
+    <h3>Prerequisites</h3>
+    <p style="color:var(--muted); font-size:14px; margin-bottom:16px;">Azure account, Azure CLI installed, and Docker installed locally.</p>
+
+<pre><span class="c"># Install Azure CLI (macOS)</span>
+brew update && brew install azure-cli
+
+<span class="c"># Log in</span>
+az login
+
+<span class="c"># Set variables used throughout — edit these</span>
+RG=<span class="s">"smart-cost-rg"</span>
+LOCATION=<span class="s">"uksouth"</span>
+ACR=<span class="s">"smartcostacr"</span>          <span class="c"># must be globally unique, lowercase</span>
+ENV=<span class="s">"smart-cost-env"</span>
+</pre>
+
+    <div class="steps" style="margin-top:32px;">
+
+      <!-- Step 1 -->
+      <div class="step">
+        <div class="step-left"><div class="step-num azure">1</div><div class="step-line"></div></div>
+        <div class="step-body">
+          <h4>Create Resource Group and Container Registry</h4>
+          <p>All Azure resources live in a resource group. The Container Registry stores your custom Docker images — Kong uses the official image directly, so only the smart-router needs to be pushed here.</p>
+<pre><span class="c"># Resource group</span>
+az group create --name $RG --location $LOCATION
+
+<span class="c"># Azure Container Registry</span>
+az acr create \
+  --resource-group $RG \
+  --name $ACR \
+  --sku Basic \
+  --admin-enabled true
+
+<span class="c"># Build and push the smart-router image</span>
+az acr build \
+  --registry $ACR \
+  --image smart-router:latest \
+  ./smart-router
+</pre>
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="step">
+        <div class="step-left"><div class="step-num azure">2</div><div class="step-line"></div></div>
+        <div class="step-body">
+          <h4>Store secrets in Azure Key Vault</h4>
+          <p>Key Vault keeps API keys out of your config files and provides a full audit log of every secret access. Container Apps can pull secrets directly from Key Vault using managed identity — no credentials in environment variables.</p>
+<pre><span class="c"># Create Key Vault</span>
+az keyvault create \
+  --name smart-cost-kv \
+  --resource-group $RG \
+  --location $LOCATION
+
+<span class="c"># Store your API keys</span>
+az keyvault secret set --vault-name smart-cost-kv \
+  --name openai-api-key     --value <span class="s">"sk-..."</span>
+az keyvault secret set --vault-name smart-cost-kv \
+  --name anthropic-api-key  --value <span class="s">"sk-ant-..."</span>
+</pre>
+        </div>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="step">
+        <div class="step-left"><div class="step-num azure">3</div><div class="step-line"></div></div>
+        <div class="step-body">
+          <h4>Create a Container Apps Environment</h4>
+          <p>The environment is the shared VNet boundary where all three containers live. Services within the same environment can reach each other by name without public exposure. A Log Analytics workspace is attached for centralised logging.</p>
+<pre><span class="c"># Log Analytics workspace (for observability)</span>
+az monitor log-analytics workspace create \
+  --resource-group $RG \
+  --workspace-name smart-cost-logs
+
+LAWS_ID=$(az monitor log-analytics workspace show \
+  --resource-group $RG \
+  --workspace-name smart-cost-logs \
+  --query customerId -o tsv)
+
+LAWS_KEY=$(az monitor log-analytics workspace get-shared-keys \
+  --resource-group $RG \
+  --workspace-name smart-cost-logs \
+  --query primarySharedKey -o tsv)
+
+<span class="c"># Container Apps environment</span>
+az containerapp env create \
+  --name $ENV \
+  --resource-group $RG \
+  --location $LOCATION \
+  --logs-workspace-id $LAWS_ID \
+  --logs-workspace-key $LAWS_KEY
+</pre>
+        </div>
+      </div>
+
+      <!-- Step 4 -->
+      <div class="step">
+        <div class="step-left"><div class="step-num azure">4</div><div class="step-line"></div></div>
+        <div class="step-body">
+          <h4>Deploy the Smart Router</h4>
+          <p>Deploy as an internal-only Container App — no public ingress, only reachable by other apps in the same environment. Scale to 0 when idle to eliminate cost during quiet hours.</p>
+<pre>ACR_LOGIN=$(az acr credential show --name $ACR --query username -o tsv)
+ACR_PASS=$(az acr credential show  --name $ACR --query <span class="s">"passwords[0].value"</span> -o tsv)
+
+az containerapp create \
+  --name smart-router \
+  --resource-group $RG \
+  --environment $ENV \
+  --image ${ACR}.azurecr.io/smart-router:latest \
+  --registry-server ${ACR}.azurecr.io \
+  --registry-username $ACR_LOGIN \
+  --registry-password $ACR_PASS \
+  --target-port 8080 \
+  --ingress internal \          <span class="c"># NOT public — only reachable within env</span>
+  --min-replicas 0 \
+  --max-replicas 3 \
+  --cpu 0.25 --memory 0.5Gi \
+  --env-vars \
+    OPENAI_API_KEY=secretref:openai-api-key \
+    ANTHROPIC_API_KEY=secretref:anthropic-api-key \
+    MOCK_MODE=false \
+  --secrets \
+    openai-api-key=keyvaultref:https://smart-cost-kv.vault.azure.net/secrets/openai-api-key,identityref:system \
+    anthropic-api-key=keyvaultref:https://smart-cost-kv.vault.azure.net/secrets/anthropic-api-key,identityref:system
+</pre>
+        </div>
+      </div>
+
+      <!-- Step 5 -->
+      <div class="step">
+        <div class="step-left"><div class="step-num azure">5</div><div class="step-line"></div></div>
+        <div class="step-body">
+          <h4>Deploy Kong Gateway</h4>
+          <p>Kong uses the official image and reads config from an Azure File Share mounted as a volume. The upstream host in <code>kong.yml</code> becomes the Container Apps internal FQDN for the smart-router.</p>
+<pre><span class="c"># Create Azure File Share for kong.yml</span>
+SA=smartcostsa$RANDOM
+az storage account create --name $SA --resource-group $RG --sku Standard_LRS
+az storage share create  --name kong-config --account-name $SA
+
+<span class="c"># Upload kong.yml (edit host to smart-router's internal FQDN first)</span>
+<span class="c"># Internal FQDN pattern: &lt;appname&gt;.internal.&lt;env-default-domain&gt;</span>
+ROUTER_FQDN=$(az containerapp show --name smart-router --resource-group $RG \
+  --query properties.configuration.ingress.fqdn -o tsv)
+
+sed "s/host: smart-router/host: $ROUTER_FQDN/" kong/kong.yml > /tmp/kong-prod.yml
+az storage file upload \
+  --account-name $SA --share-name kong-config \
+  --source /tmp/kong-prod.yml --path kong.yml
+
+SA_KEY=$(az storage account keys list --account-name $SA --query [0].value -o tsv)
+
+<span class="c"># Deploy Kong</span>
+az containerapp create \
+  --name kong-gateway \
+  --resource-group $RG \
+  --environment $ENV \
+  --image kong:3.9 \
+  --target-port 8000 \
+  --ingress external \         <span class="c"># public — this is what clients call</span>
+  --min-replicas 1 \
+  --max-replicas 5 \
+  --cpu 0.5 --memory 1.0Gi \
+  --env-vars \
+    KONG_DATABASE=off \
+    KONG_DECLARATIVE_CONFIG=/kong/declarative/kong.yml \
+    KONG_PROXY_LISTEN=<span class="s">"0.0.0.0:8000"</span> \
+    KONG_ADMIN_LISTEN=<span class="s">"127.0.0.1:8001"</span> \
+    KONG_LOG_LEVEL=info \
+    KONG_PLUGINS=bundled \
+  --storage-name kong-config-vol \
+  --azure-file-volume-account-name $SA \
+  --azure-file-volume-account-key $SA_KEY \
+  --azure-file-volume-share-name kong-config \
+  --azure-file-volume-mount-path /kong/declarative
+</pre>
+        </div>
+      </div>
+
+      <!-- Step 6 -->
+      <div class="step">
+        <div class="step-left"><div class="step-num azure">6</div><div class="step-line"></div></div>
+        <div class="step-body">
+          <h4>Deploy the Frontend</h4>
+<pre><span class="c"># Get Kong's public URL</span>
+KONG_URL=$(az containerapp show --name kong-gateway --resource-group $RG \
+  --query properties.configuration.ingress.fqdn -o tsv)
+
+<span class="c"># Patch the frontend to point at Kong</span>
+sed "s|http://localhost:8000|https://$KONG_URL|g" frontend/index.html > /tmp/index-prod.html
+
+<span class="c"># Build a custom nginx image with the patched file</span>
+cat > /tmp/Dockerfile.frontend &lt;&lt;EOF
+FROM nginx:alpine
+COPY index-prod.html /usr/share/nginx/html/index.html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+EOF
+az acr build --registry $ACR --image frontend:latest \
+  -f /tmp/Dockerfile.frontend ./frontend
+
+az containerapp create \
+  --name smart-cost-ui \
+  --resource-group $RG \
+  --environment $ENV \
+  --image ${ACR}.azurecr.io/frontend:latest \
+  --registry-server ${ACR}.azurecr.io \
+  --registry-username $ACR_LOGIN \
+  --registry-password $ACR_PASS \
+  --target-port 80 \
+  --ingress external \
+  --min-replicas 0 --max-replicas 2 \
+  --cpu 0.25 --memory 0.5Gi
+</pre>
+        </div>
+      </div>
+
+      <!-- Step 7 -->
+      <div class="step">
+        <div class="step-left"><div class="step-num azure">7</div><div class="step-line"></div></div>
+        <div class="step-body">
+          <h4>Verify and monitor</h4>
+<pre><span class="c"># Get all public URLs</span>
+az containerapp show --name kong-gateway     --resource-group $RG --query properties.configuration.ingress.fqdn -o tsv
+az containerapp show --name smart-cost-ui   --resource-group $RG --query properties.configuration.ingress.fqdn -o tsv
+
+<span class="c"># Test Kong end-to-end</span>
+KONG_URL=$(az containerapp show --name kong-gateway --resource-group $RG \
+  --query properties.configuration.ingress.fqdn -o tsv)
+
+curl -X POST https://$KONG_URL/v1/chat/completions \
+  -H <span class="s">"Content-Type: application/json"</span> \
+  -d <span class="s">'{"model":"auto","messages":[{"role":"user","content":"Summarize Kong in one sentence."}]}'</span>
+
+<span class="c"># View logs in Log Analytics</span>
+az monitor log-analytics query \
+  --workspace smart-cost-logs \
+  --analytics-query "ContainerAppConsoleLogs_CL | where ContainerAppName_s == 'kong-gateway' | take 50"
+</pre>
+          <div class="ok-box" style="margin-top:8px;">Azure deployment complete. Total time: ~45–60 minutes.</div>
+        </div>
+      </div>
+
+    </div><!-- /steps -->
+  </div>
+</section>
+
+<!-- ── Cost breakdown ── -->
+<section id="cost">
+  <div class="container">
+    <div class="section-label">Cost Breakdown</div>
+    <h2>What you actually pay each month</h2>
+    <p class="section-sub">
+      Both platforms use consumption-based pricing. These estimates assume moderate personal use:
+      ~500 requests/day, services idle ~12 hours/day.
+    </p>
+
+    <div class="cost-grid">
+      <div class="cost-card fly">
+        <div class="cc-platform">Fly.io</div>
+        <div class="cost-line"><span class="cl-item">Kong (shared-cpu-1x, 512MB, always-on)</span><span class="cl-price">~$5.70</span></div>
+        <div class="cost-line"><span class="cl-item">Smart Router (shared-cpu-1x, 256MB, scale-to-zero)</span><span class="cl-price">~$1.50</span></div>
+        <div class="cost-line"><span class="cl-item">Frontend (shared-cpu-1x, 128MB, scale-to-zero)</span><span class="cl-price">~$0.50</span></div>
+        <div class="cost-line"><span class="cl-item">Fly volume for kong.yml (1 GB)</span><span class="cl-price">~$0.15</span></div>
+        <div class="cost-line"><span class="cl-item">Egress bandwidth (~5 GB/mo)</span><span class="cl-price">~$0.50</span></div>
+        <div class="cost-line"><span class="cl-item">TLS cert (Let's Encrypt)</span><span class="cl-price">Free</span></div>
+        <div class="cost-total"><span>Total / month</span><span style="color:var(--fly)">~$8–12</span></div>
+        <p style="font-size:12px; color:var(--muted); margin-top:12px;">
+          Free tier includes 3 shared-cpu-1x VMs and 160 GB egress —
+          this stack fits within the free tier for light use.
+        </p>
+      </div>
+
+      <div class="cost-card azure">
+        <div class="cc-platform">Azure Container Apps</div>
+        <div class="cost-line"><span class="cl-item">Kong (0.5 vCPU / 1 GB, always-on)</span><span class="cl-price">~$12.00</span></div>
+        <div class="cost-line"><span class="cl-item">Smart Router (0.25 vCPU / 0.5 GB, scale-to-zero)</span><span class="cl-price">~$3.00</span></div>
+        <div class="cost-line"><span class="cl-item">Frontend (0.25 vCPU / 0.5 GB, scale-to-zero)</span><span class="cl-price">~$1.50</span></div>
+        <div class="cost-line"><span class="cl-item">Azure Container Registry (Basic)</span><span class="cl-price">~$5.00</span></div>
+        <div class="cost-line"><span class="cl-item">Azure Files (kong.yml storage)</span><span class="cl-price">~$0.10</span></div>
+        <div class="cost-line"><span class="cl-item">Log Analytics workspace</span><span class="cl-price">~$2.50</span></div>
+        <div class="cost-line"><span class="cl-item">Key Vault operations</span><span class="cl-price">~$0.10</span></div>
+        <div class="cost-line"><span class="cl-item">Egress bandwidth (~5 GB/mo)</span><span class="cl-price">~$0.45</span></div>
+        <div class="cost-total"><span>Total / month</span><span style="color:var(--azure)">~$25–40</span></div>
+        <p style="font-size:12px; color:var(--muted); margin-top:12px;">
+          Azure free tier gives $200 credit for 30 days. After that, full pay-as-you-go rates apply.
+          Costs drop ~40% with reserved capacity (1-year commitment).
+        </p>
+      </div>
+    </div>
+
+    <div class="info-box" style="margin-top:20px;">
+      <strong>Remember:</strong> both of these costs sit on top of your $40/month in LLM subscriptions
+      and any OpenRouter overflow. Fly.io at ~$10/mo keeps total infrastructure spend under $55/mo.
+      Azure at ~$35/mo pushes it to ~$75/mo but adds enterprise features most personal setups don't need.
+    </div>
+  </div>
+</section>
+
+<!-- ── Maintenance ── -->
+<section id="maintenance">
+  <div class="container">
+    <div class="section-label">Maintenance</div>
+    <h2>Ongoing operational effort</h2>
+
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th style="width:22%">Task</th>
+          <th class="fly-col" style="width:39%">Fly.io</th>
+          <th class="az-col" style="width:39%">Azure</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="row-label">Update kong.yml</td>
+          <td>Run a one-off machine to overwrite the volume file, then <code>fly deploy</code>. ~2 min.</td>
+          <td>Upload new file to Azure Files share, then trigger revision with <code>az containerapp update</code>. ~3 min.</td>
+        </tr>
+        <tr>
+          <td class="row-label">Update model strings</td>
+          <td colspan="2">Edit <code>kong/kong.yml</code>, redeploy Kong. Same effort on both platforms. ~2 min.</td>
+        </tr>
+        <tr>
+          <td class="row-label">Rotate API keys</td>
+          <td><code>fly secrets set OPENAI_API_KEY=sk-new-...</code> — instant, no redeploy needed.</td>
+          <td><code>az keyvault secret set ...</code> — Container Apps picks up new version on next restart or within minutes.</td>
+        </tr>
+        <tr>
+          <td class="row-label">OS / runtime patching</td>
+          <td><span class="win">Fully managed</span> — Fly handles host OS and hypervisor.</td>
+          <td><span class="win">Fully managed</span> — Azure handles underlying infrastructure.</td>
+        </tr>
+        <tr>
+          <td class="row-label">Kong version upgrade</td>
+          <td>Change <code>image = "kong:3.10"</code> in fly.toml, run <code>fly deploy</code>.</td>
+          <td>Update image tag in <code>az containerapp update --image kong:3.10</code>.</td>
+        </tr>
+        <tr>
+          <td class="row-label">Scaling under load</td>
+          <td>Set <code>max-machines</code> in fly.toml. Fly auto-scales horizontally.</td>
+          <td>Set <code>--max-replicas</code>. Azure scales with HTTP concurrency rules.</td>
+        </tr>
+        <tr>
+          <td class="row-label">Monitoring alerts</td>
+          <td>Basic — Fly dashboard + <code>fly logs</code>. No built-in alerting.</td>
+          <td><span class="win">Full</span> — Azure Monitor alert rules, action groups, email/SMS/PagerDuty.</td>
+        </tr>
+        <tr>
+          <td class="row-label">Incident debugging</td>
+          <td><code>fly logs</code>, <code>fly ssh console</code> to shell into a machine.</td>
+          <td>Log Analytics queries, Application Insights, container console in portal.</td>
+        </tr>
+        <tr>
+          <td class="row-label">Estimated monthly ops time</td>
+          <td><span class="win">&lt;30 min/month</span> for a personal setup</td>
+          <td><span class="neutral">~1–2 hours/month</span> — more surface area to manage</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ── Verdict ── -->
+<section id="verdict">
+  <div class="container">
+    <div class="section-label">Verdict</div>
+    <h2>Which one should you pick?</h2>
+
+    <div class="rec-card fly-rec">
+      <h3>Choose Fly.io if...</h3>
+      <p>This is your <strong>personal $40/month LLM setup</strong> and you want to spend $10/month on infrastructure, not $35. Fly's free tier can run the whole stack with light usage. Setup takes 20 minutes, maintenance is near-zero, and the developer experience is excellent. <strong>This is the right choice for this specific use case.</strong></p>
+      <p>Also good for: side projects, indie SaaS under 10K req/day, anyone who wants to move fast without learning Kubernetes or Azure IAM.</p>
+    </div>
+
+    <div class="rec-card azure-rec" style="margin-top:16px;">
+      <h3>Choose Azure if...</h3>
+      <p>You're building this for a <strong>team or company</strong> where the $40/month subscriptions are just the start. Azure gives you Key Vault for proper secret governance, Log Analytics for compliance audit logs, VNet isolation, managed identity (no credentials in env vars), and SLAs you can put in a contract. <strong>The extra $20–30/month is worth it at team scale.</strong></p>
+      <p>Also good for: regulated industries (HIPAA, PCI), teams already in the Azure ecosystem, setups that need AD/SSO integration.</p>
+    </div>
+
+    <div class="info-box" style="margin-top:20px;">
+      <strong>Migration path:</strong> start on Fly.io. If usage grows or you onboard a team,
+      the Kong config (<code>kong.yml</code>) is completely portable — copy it to Azure and it works identically.
+      The only migration work is re-deploying the three containers and updating DNS.
+    </div>
+  </div>
+</section>
+
+<footer>
+  Smart-Cost Multi-LLM Orchestrator &mdash; Kong Gateway PoC &mdash;
+  <a href="index.html">Overview</a> &nbsp;·&nbsp;
+  <a href="use-case.html">My $40/mo Setup</a> &nbsp;·&nbsp;
+  <a href="frontend/index.html">Live Demo</a> &nbsp;·&nbsp;
+  <a href="https://github.com/rifaterdemsahin/kong-gateway">GitHub</a>
+</footer>
+
+</body>
+</html>
