@@ -284,9 +284,48 @@
     .routing-grid { grid-template-columns: 1fr; }
     .value-grid { grid-template-columns: 1fr; }
   }
+
+  /* ── Nav ── */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(15,17,23,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    display: flex; align-items: center;
+    height: 52px;
+  }
+  .nav-logo { font-size: 15px; font-weight: 700; color: var(--text); margin-right: 28px; text-decoration: none; }
+  .nav-logo:hover { text-decoration: none; color: var(--accent); }
+  .nav-links { display: flex; gap: 4px; flex: 1; }
+  .nav-link {
+    padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: 500;
+    color: var(--muted); transition: background 0.15s, color 0.15s; text-decoration: none;
+  }
+  .nav-link:hover { background: var(--surface2); color: var(--text); text-decoration: none; }
+  .nav-link.active { background: var(--surface2); color: var(--text); }
+  .nav-actions { margin-left: auto; }
+  .nav-btn {
+    padding: 5px 14px; border-radius: 8px; font-size: 13px; font-weight: 600;
+    background: var(--accent); color: #fff; text-decoration: none; display: inline-block;
+  }
+  .nav-btn:hover { background: #818cf8; text-decoration: none; }
 </style>
 </head>
 <body>
+
+<!-- ── Nav ── -->
+<nav>
+  <a href="index.html" class="nav-logo">K Smart-Cost</a>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link active">Overview</a>
+    <a href="use-case.html" class="nav-link">My $40/mo Setup</a>
+    <a href="frontend/index.html" class="nav-link">Live Demo</a>
+  </div>
+  <div class="nav-actions">
+    <a href="frontend/index.html" class="nav-btn">Open Chat</a>
+  </div>
+</nav>
 
 <!-- ── Hero ── -->
 <div class="hero">

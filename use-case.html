@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>My $40/mo Multi-LLM Setup — Smart-Cost Kong Gateway</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3348;
+    --text: #e2e8f0;
+    --muted: #7c8cb0;
+    --accent: #6366f1;
+    --green: #22c55e;
+    --amber: #f59e0b;
+    --red: #ef4444;
+    --blue: #3b82f6;
+    --purple: #a855f7;
+    --code-bg: #12141f;
+
+    /* Provider colours */
+    --gemini: #4285f4;
+    --claude: #d97706;
+    --kimi: #06b6d4;
+    --deepseek: #8b5cf6;
+    --openrouter: #10b981;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* ── Nav ── */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(15,17,23,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    display: flex; align-items: center;
+    height: 52px;
+  }
+  .nav-logo { font-size: 15px; font-weight: 700; color: var(--text); margin-right: 28px; text-decoration: none; }
+  .nav-logo:hover { color: var(--accent); text-decoration: none; }
+  .nav-links { display: flex; gap: 4px; flex: 1; }
+  .nav-link { padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--muted); text-decoration: none; }
+  .nav-link:hover { background: var(--surface2); color: var(--text); text-decoration: none; }
+  .nav-link.active { background: var(--surface2); color: var(--text); }
+  .nav-actions { margin-left: auto; }
+  .nav-btn { padding: 5px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; background: var(--accent); color: #fff; text-decoration: none; display: inline-block; }
+  .nav-btn:hover { background: #818cf8; text-decoration: none; }
+
+  /* ── Hero ── */
+  .hero {
+    background: linear-gradient(160deg, #0f1117 0%, #1a1530 50%, #0f1117 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 64px 24px 52px;
+    text-align: center;
+  }
+  .hero .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #1e2235; border: 1px solid #3b4270; border-radius: 20px;
+    padding: 4px 14px; font-size: 12px; font-weight: 600; color: #818cf8;
+    letter-spacing: 0.5px; margin-bottom: 22px;
+  }
+  .hero h1 { font-size: clamp(26px, 4.5vw, 46px); font-weight: 800; letter-spacing: -1.2px; line-height: 1.15; margin-bottom: 18px; }
+  .hero h1 em { font-style: normal; color: var(--accent); }
+  .hero p { font-size: 17px; color: var(--muted); max-width: 580px; margin: 0 auto; }
+
+  /* ── Layout ── */
+  .container { max-width: 900px; margin: 0 auto; padding: 0 24px; }
+  section { padding: 60px 0; border-bottom: 1px solid var(--border); }
+  section:last-of-type { border-bottom: none; }
+  .section-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); margin-bottom: 8px; }
+  h2 { font-size: 26px; font-weight: 700; letter-spacing: -0.4px; margin-bottom: 8px; }
+  .section-sub { color: var(--muted); font-size: 15px; margin-bottom: 32px; }
+
+  code { font-family: "SF Mono", "Fira Code", monospace; background: var(--surface2); border: 1px solid var(--border); padding: 1px 6px; border-radius: 4px; font-size: 12px; color: #a5b4fc; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px; padding: 20px 24px; overflow-x: auto; font-size: 13px; line-height: 1.7; font-family: "SF Mono", "Fira Code", monospace; color: #c9d1d9; margin-top: 18px; }
+  pre .comment { color: #6b7a99; }
+  pre .key { color: #ff7b72; }
+  pre .val { color: #a5d6ff; }
+  pre .str { color: #79c0ff; }
+
+  /* ── Provider cards ── */
+  .provider-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-top: 28px; }
+  .provider-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px;
+    border-top: 3px solid var(--border);
+  }
+  .provider-card.gemini  { border-top-color: var(--gemini); }
+  .provider-card.claude  { border-top-color: var(--claude); }
+  .provider-card.kimi    { border-top-color: var(--kimi); }
+  .provider-card.deepseek { border-top-color: var(--deepseek); }
+  .provider-card .p-name { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .provider-card.gemini .p-name  { color: var(--gemini); }
+  .provider-card.claude .p-name  { color: var(--claude); }
+  .provider-card.kimi .p-name    { color: var(--kimi); }
+  .provider-card.deepseek .p-name { color: var(--deepseek); }
+  .provider-card .p-model { font-size: 12px; font-family: monospace; color: var(--muted); margin-bottom: 12px; }
+  .provider-card .p-cost { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+  .provider-card .p-limit { font-size: 12px; color: var(--muted); }
+  .provider-card .p-via { font-size: 11px; color: var(--muted); margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); }
+
+  /* ── Problem callouts ── */
+  .problem-list { display: flex; flex-direction: column; gap: 12px; margin-top: 24px; }
+  .problem-item {
+    display: flex; gap: 14px; align-items: flex-start;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px;
+  }
+  .problem-icon { font-size: 22px; flex-shrink: 0; margin-top: 2px; }
+  .problem-item h3 { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .problem-item p { font-size: 13px; color: var(--muted); }
+
+  /* ── Architecture flow ── */
+  .arch-box {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 28px; margin-top: 28px;
+  }
+  .arch-row { display: flex; align-items: center; gap: 0; flex-wrap: wrap; }
+  .arch-node {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 18px; font-size: 13px; font-weight: 600; text-align: center;
+  }
+  .arch-arrow { color: var(--muted); font-size: 18px; padding: 0 10px; }
+  .arch-fork { display: flex; flex-direction: column; gap: 8px; }
+  .fork-item {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 14px; font-size: 12px; font-weight: 600;
+  }
+  .fork-item .fdot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .fork-item .fdot.gemini  { background: var(--gemini); }
+  .fork-item .fdot.claude  { background: var(--claude); }
+  .fork-item .fdot.kimi    { background: var(--kimi); }
+  .fork-item .fdot.deepseek { background: var(--deepseek); }
+
+  /* ── Usage quota bar ── */
+  .quota-section { display: flex; flex-direction: column; gap: 18px; margin-top: 28px; }
+  .quota-row { display: flex; flex-direction: column; gap: 6px; }
+  .quota-header { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; }
+  .quota-header .qmodel { color: var(--muted); font-weight: 400; font-size: 12px; }
+  .quota-track { background: var(--surface2); border-radius: 6px; height: 10px; overflow: hidden; position: relative; }
+  .quota-fill { height: 100%; border-radius: 6px; transition: width 1s ease; }
+  .quota-fill.gemini  { background: var(--gemini); }
+  .quota-fill.claude  { background: var(--claude); }
+  .quota-fill.or      { background: var(--openrouter); }
+  .quota-row .qnote { font-size: 11px; color: var(--muted); }
+  .quota-row .qnote strong { color: var(--text); }
+  .warning-bar {
+    background: #451a03; border: 1px solid #92400e; border-radius: 10px;
+    padding: 14px 18px; font-size: 13px; color: var(--amber); margin-top: 4px;
+  }
+  .ok-bar {
+    background: #052e16; border: 1px solid #166534; border-radius: 10px;
+    padding: 14px 18px; font-size: 13px; color: var(--green); margin-top: 4px;
+  }
+
+  /* ── Policy table ── */
+  .policy-table { width: 100%; border-collapse: collapse; margin-top: 24px; font-size: 13px; }
+  .policy-table th { text-align: left; padding: 10px 14px; color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; border-bottom: 1px solid var(--border); }
+  .policy-table td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .policy-table tr:last-child td { border-bottom: none; }
+  .policy-table tr:hover td { background: var(--surface2); }
+  .tag { display: inline-block; background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; padding: 1px 7px; font-size: 11px; font-family: monospace; color: #a5b4fc; }
+  .badge-g { color: var(--gemini); font-weight: 600; }
+  .badge-c { color: var(--claude); font-weight: 600; }
+  .badge-k { color: var(--kimi); font-weight: 600; }
+  .badge-d { color: var(--deepseek); font-weight: 600; }
+
+  /* ── Steps ── */
+  .steps { display: flex; flex-direction: column; gap: 0; margin-top: 28px; }
+  .step { display: flex; gap: 18px; padding-bottom: 28px; position: relative; }
+  .step:last-child { padding-bottom: 0; }
+  .step-left { display: flex; flex-direction: column; align-items: center; width: 36px; flex-shrink: 0; }
+  .step-num { width: 34px; height: 34px; border-radius: 50%; background: var(--surface2); border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: var(--accent); z-index: 1; }
+  .step-line { flex: 1; width: 2px; background: var(--border); margin-top: 6px; }
+  .step:last-child .step-line { display: none; }
+  .step-body { padding-top: 5px; flex: 1; }
+  .step-body h4 { font-size: 15px; font-weight: 600; margin-bottom: 5px; }
+  .step-body p { font-size: 14px; color: var(--muted); }
+  .step-body .highlight { color: var(--text); }
+
+  /* ── Model comparison ── */
+  .model-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 24px; }
+  .model-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  .model-card .mc-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .mc-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .mc-dot.gemini  { background: var(--gemini); }
+  .mc-dot.claude  { background: var(--claude); }
+  .mc-dot.kimi    { background: var(--kimi); }
+  .mc-dot.deepseek { background: var(--deepseek); }
+  .model-card .mc-name { font-size: 15px; font-weight: 700; }
+  .model-card .mc-sub  { font-size: 12px; color: var(--muted); font-family: monospace; }
+  .model-card ul { padding-left: 16px; }
+  .model-card li { font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  .model-card .mc-cost { font-size: 12px; color: var(--muted); margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .model-card .mc-cost strong { color: var(--text); }
+
+  /* ── Callout ── */
+  .callout {
+    background: #1e2035; border: 1px solid #3b4270;
+    border-radius: 12px; padding: 22px 24px; margin-top: 28px;
+  }
+  .callout h3 { font-size: 15px; font-weight: 700; margin-bottom: 8px; color: #818cf8; }
+  .callout p { font-size: 14px; color: var(--muted); }
+  .callout p strong { color: var(--text); }
+
+  footer { padding: 40px 24px; text-align: center; color: var(--muted); font-size: 13px; border-top: 1px solid var(--border); }
+
+  @media (max-width: 640px) {
+    .provider-grid { grid-template-columns: 1fr 1fr; }
+    .model-grid { grid-template-columns: 1fr; }
+    .arch-row { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Nav ── -->
+<nav>
+  <a href="index.html" class="nav-logo">K Smart-Cost</a>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">Overview</a>
+    <a href="use-case.html" class="nav-link active">My $40/mo Setup</a>
+    <a href="frontend/index.html" class="nav-link">Live Demo</a>
+  </div>
+  <div class="nav-actions">
+    <a href="frontend/index.html" class="nav-btn">Open Chat</a>
+  </div>
+</nav>
+
+<!-- ── Hero ── -->
+<div class="hero">
+  <div class="badge">Real-World Use Case</div>
+  <h1>My <em>$40/month</em> Multi-LLM Setup<br>Running Through Kong</h1>
+  <p>
+    Two paid subscriptions, two OpenRouter models, all running in parallel —
+    Kong makes sure none of them ever hit their usage limits.
+  </p>
+</div>
+
+<!-- ── The Setup ── -->
+<section>
+  <div class="container">
+    <div class="section-label">The Setup</div>
+    <h2>Four models, two budgets, one gateway</h2>
+    <p class="section-sub">
+      I pay $20/month to Google Gemini and $20/month to Anthropic Claude.
+      On top of that I use OpenRouter to access Kimi 2.7 and DeepSeek Flash v4 —
+      both frontier models available cheaply via pay-per-token.
+      I run all four simultaneously for different tasks.
+    </p>
+
+    <div class="provider-grid">
+      <div class="provider-card gemini">
+        <div class="p-name">Google Gemini</div>
+        <div class="p-model">gemini-2.5-pro</div>
+        <div class="p-cost">$20 / month flat</div>
+        <div class="p-limit">Subscription quota<br>~1,500 messages/day (approx)</div>
+      </div>
+
+      <div class="provider-card claude">
+        <div class="p-name">Anthropic Claude</div>
+        <div class="p-model">claude-sonnet-4-5 / claude-opus-4</div>
+        <div class="p-cost">$20 / month flat</div>
+        <div class="p-limit">Subscription quota<br>~1,000 messages/day (approx)</div>
+      </div>
+
+      <div class="provider-card kimi">
+        <div class="p-name">Kimi 2.7</div>
+        <div class="p-model">moonshot/kimi-k2</div>
+        <div class="p-cost">Pay-per-token</div>
+        <div class="p-limit">No hard limit<br>Overflow + long context</div>
+        <div class="p-via">via OpenRouter</div>
+      </div>
+
+      <div class="provider-card deepseek">
+        <div class="p-name">DeepSeek Flash v4</div>
+        <div class="p-model">deepseek/deepseek-chat-v3-0324</div>
+        <div class="p-cost">Pay-per-token (very cheap)</div>
+        <div class="p-limit">No hard limit<br>Speed + cost fallback</div>
+        <div class="p-via">via OpenRouter</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── The Problem ── -->
+<section>
+  <div class="container">
+    <div class="section-label">The Problem</div>
+    <h2>Three things go wrong without a gateway</h2>
+    <p class="section-sub">Running multiple subscriptions manually creates real operational headaches.</p>
+
+    <div class="problem-list">
+      <div class="problem-item">
+        <div class="problem-icon">🚫</div>
+        <div>
+          <h3>You hit Gemini or Claude's daily limit mid-day — and don't know until it fails</h3>
+          <p>
+            Both Gemini Advanced and Claude Pro have soft usage caps that reset daily.
+            Heavy use in the morning — long coding sessions, big document analysis — can
+            exhaust the quota by noon. Without monitoring, the next request just errors out.
+            You waste time switching tabs, logging into the other service, and re-pasting context.
+          </p>
+        </div>
+      </div>
+
+      <div class="problem-item">
+        <div class="problem-icon">💸</div>
+        <div>
+          <h3>You're paying for subscriptions but defaulting to OpenRouter anyway</h3>
+          <p>
+            If you're not actively tracking usage, you unconsciously route too much traffic to
+            OpenRouter (pay-per-token) even when you have headroom left on your flat-rate subscriptions.
+            You lose the value of the $40/month you already paid.
+          </p>
+        </div>
+      </div>
+
+      <div class="problem-item">
+        <div class="problem-icon">🔄</div>
+        <div>
+          <h3>"Latest model" is a moving target — you're always chasing it manually</h3>
+          <p>
+            Google ships a new Gemini version. Anthropic releases Claude Sonnet 4.5, then Opus 4.
+            Moonshot updates Kimi. DeepSeek ships a faster Flash variant. Without a central config,
+            you're updating model strings scattered across tools, scripts, and chats individually.
+          </p>
+        </div>
+      </div>
+
+      <div class="problem-item">
+        <div class="problem-icon">🧩</div>
+        <div>
+          <h3>No single interface — context switching kills flow</h3>
+          <p>
+            Four models means four browser tabs or four CLI configs. Every switch breaks
+            your train of thought. You want one endpoint that hides the complexity.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── The Solution ── -->
+<section>
+  <div class="container">
+    <div class="section-label">How Kong Fixes It</div>
+    <h2>Kong acts as a smart quota manager and model router</h2>
+    <p class="section-sub">
+      Every request goes to one Kong endpoint. Kong tracks quota consumption per provider,
+      picks the best available model, injects the right API key, and falls back gracefully
+      when a subscription limit is close — all before a single token is generated.
+    </p>
+
+    <div class="arch-box">
+      <div style="font-size:12px; color:var(--muted); margin-bottom:20px; text-transform:uppercase; letter-spacing:0.6px; font-weight:700;">Request flow</div>
+      <div class="arch-row" style="gap:0; flex-wrap:nowrap; overflow-x:auto; padding-bottom:4px;">
+        <div class="arch-node" style="min-width:120px">
+          Any client<br><span style="font-size:11px; color:var(--muted); font-weight:400">CLI / IDE / App</span>
+        </div>
+        <div class="arch-arrow">&#8594;</div>
+        <div class="arch-node" style="border-color:var(--accent); min-width:160px">
+          <span style="color:var(--accent)">Kong Gateway</span><br>
+          <span style="font-size:11px; color:var(--muted); font-weight:400">:8000/v1/chat/completions</span>
+        </div>
+        <div class="arch-arrow">&#8594;</div>
+        <div class="arch-fork">
+          <div class="fork-item"><span class="fdot gemini"></span>Gemini 2.5 Pro <span style="color:var(--muted); font-size:11px; margin-left:4px">(primary)</span></div>
+          <div class="fork-item"><span class="fdot claude"></span>Claude Sonnet / Opus <span style="color:var(--muted); font-size:11px; margin-left:4px">(secondary)</span></div>
+          <div class="fork-item"><span class="fdot kimi"></span>Kimi 2.7 <span style="color:var(--muted); font-size:11px; margin-left:4px">(overflow / long-ctx)</span></div>
+          <div class="fork-item"><span class="fdot deepseek"></span>DeepSeek Flash v4 <span style="color:var(--muted); font-size:11px; margin-left:4px">(speed fallback)</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Routing Policy ── -->
+<section>
+  <div class="container">
+    <div class="section-label">Routing Policy</div>
+    <h2>Which model gets the request, and when</h2>
+    <p class="section-sub">
+      Kong's <code>pre-function</code> Lua plugin tracks a rolling request counter per provider
+      and applies this decision table on every inbound call.
+    </p>
+
+    <table class="policy-table">
+      <thead>
+        <tr>
+          <th>Condition</th>
+          <th>Routes to</th>
+          <th>Why</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Gemini quota &lt; 80% used today</td>
+          <td><span class="badge-g">Gemini 2.5 Pro</span></td>
+          <td>Primary — already paid, best value, strong at long context and multimodal.</td>
+        </tr>
+        <tr>
+          <td>Gemini &gt; 80% — Claude quota &lt; 80%</td>
+          <td><span class="badge-c">Claude Sonnet 4.5</span></td>
+          <td>Secondary subscription. Exceptionally strong at coding and nuanced reasoning.</td>
+        </tr>
+        <tr>
+          <td>Prompt explicitly needs deep reasoning + both subscriptions have headroom</td>
+          <td><span class="badge-c">Claude Opus 4</span></td>
+          <td>Most capable model in the pool. Reserved for hard problems.</td>
+        </tr>
+        <tr>
+          <td>Both Gemini and Claude &gt; 80% quota used</td>
+          <td><span class="badge-k">Kimi 2.7</span></td>
+          <td>Overflow route. 128K context window. Pay-per-token via OpenRouter — very competitive rate.</td>
+        </tr>
+        <tr>
+          <td>Either subscription quota fully exhausted</td>
+          <td><span class="badge-d">DeepSeek Flash v4</span></td>
+          <td>Fastest, cheapest fallback. Great for simple completions, summaries, quick Q&amp;A.</td>
+        </tr>
+        <tr>
+          <td>Prompt contains image / multimodal content</td>
+          <td><span class="badge-g">Gemini 2.5 Pro</span></td>
+          <td>Best native multimodal understanding in the pool.</td>
+        </tr>
+        <tr>
+          <td>Prompt &gt; 100K tokens</td>
+          <td><span class="badge-k">Kimi 2.7</span></td>
+          <td>Kimi supports the longest context window available via OpenRouter.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ── Quota visualisation ── -->
+<section>
+  <div class="container">
+    <div class="section-label">Live Quota View</div>
+    <h2>Kong tracks daily usage — so you never hit a wall</h2>
+    <p class="section-sub">
+      A Kong shared dictionary (<code>ngx.shared.quota_counters</code>) increments on every
+      request and resets at midnight UTC. The routing Lua script reads this before picking a provider.
+      Here's what a typical mid-afternoon looks like:
+    </p>
+
+    <div class="quota-section">
+      <div class="quota-row">
+        <div class="quota-header">
+          <span>Gemini 2.5 Pro <span class="qmodel">gemini-2.5-pro</span></span>
+          <span style="color:var(--amber)">74% used</span>
+        </div>
+        <div class="quota-track"><div class="quota-fill gemini" style="width:74%"></div></div>
+        <div class="qnote"><strong>~390 requests remaining</strong> today · resets at midnight UTC</div>
+      </div>
+
+      <div class="quota-row">
+        <div class="quota-header">
+          <span>Claude Sonnet / Opus <span class="qmodel">claude-sonnet-4-5</span></span>
+          <span style="color:var(--green)">31% used</span>
+        </div>
+        <div class="quota-track"><div class="quota-fill claude" style="width:31%"></div></div>
+        <div class="qnote"><strong>~690 requests remaining</strong> today · resets at midnight UTC</div>
+      </div>
+
+      <div class="quota-row">
+        <div class="quota-header">
+          <span>OpenRouter (Kimi + DeepSeek) <span class="qmodel">pay-per-token</span></span>
+          <span style="color:var(--green)">No limit</span>
+        </div>
+        <div class="quota-track"><div class="quota-fill or" style="width:12%"></div></div>
+        <div class="qnote">12% of today's requests routed here · <strong>$0.041 spent</strong> this month so far</div>
+      </div>
+    </div>
+
+    <div class="warning-bar" style="margin-top:20px">
+      When Gemini crosses <strong>80%</strong>, Kong silently switches new requests to Claude.
+      You never see an error — the handoff is invisible to every client.
+    </div>
+
+    <div class="ok-bar" style="margin-top:10px">
+      Both subscriptions still have quota, so <strong>$0 was spent on OpenRouter today</strong>.
+      The $40/month is being fully utilised before any pay-per-token charges kick in.
+    </div>
+  </div>
+</section>
+
+<!-- ── How it works step by step ── -->
+<section>
+  <div class="container">
+    <div class="section-label">Step by Step</div>
+    <h2>What Kong does on each request</h2>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-left"><div class="step-num">1</div><div class="step-line"></div></div>
+        <div class="step-body">
+          <h4>Request arrives at Kong — one endpoint for everything</h4>
+          <p>
+            Any tool — a CLI, VS Code extension, Obsidian plugin, custom script —
+            sends <code>POST http://localhost:8000/v1/chat/completions</code> with a standard
+            OpenAI JSON body. The client sets <code>"model": "auto"</code> and lets Kong decide the rest.
+          </p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-left"><div class="step-num">2</div><div class="step-line"></div></div>
+        <div class="step-body">
+          <h4>Kong reads today's quota counters from shared memory</h4>
+          <p>
+            The <code>pre-function</code> Lua plugin calls
+            <code>ngx.shared.quota_counters:get("gemini_today")</code> and
+            <code>ngx.shared.quota_counters:get("claude_today")</code>.
+            These are in-process counters that reset at midnight via a Kong timer.
+          </p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-left"><div class="step-num">3</div><div class="step-line"></div></div>
+        <div class="step-body">
+          <h4>Prompt is analysed for special routing signals</h4>
+          <p>
+            Beyond quota, Kong checks: Is the prompt multimodal (image bytes in the body)?
+            Is it longer than 100K characters (needs Kimi's long context)?
+            Does it contain coding/debugging keywords that warrant Claude Opus?
+            These override the default quota-based path.
+          </p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-left"><div class="step-num">4</div><div class="step-line"></div></div>
+        <div class="step-body">
+          <h4>Kong sets provider headers and rewrites the model field</h4>
+          <p>
+            Based on the decision, Kong sets <code>X-Provider</code>, <code>X-Model</code>,
+            and injects the correct <code>Authorization</code> header (Google API key, Anthropic key,
+            or OpenRouter key) from Kong's secret store — no key ever touches the client.
+            It also rewrites the <span class="highlight">model field</span> in the request body
+            to the exact model string the provider expects.
+          </p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-left"><div class="step-num">5</div><div class="step-line"></div></div>
+        <div class="step-body">
+          <h4>Kong increments the provider's daily counter</h4>
+          <p>
+            After routing headers are set, the plugin does
+            <code>ngx.shared.quota_counters:incr("gemini_today", 1)</code>
+            so the next request has accurate data.
+          </p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-left"><div class="step-num">6</div><div class="step-line"></div></div>
+        <div class="step-body">
+          <h4>Response comes back in standard OpenAI format</h4>
+          <p>
+            The smart-router service normalises Gemini, Claude, and OpenRouter responses
+            into a single OpenAI-compatible schema. The client receives
+            <code>choices[0].message.content</code> regardless of which model answered,
+            plus an <code>x_routing</code> field showing which provider was used and why.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Model comparison ── -->
+<section>
+  <div class="container">
+    <div class="section-label">The Four Models</div>
+    <h2>What each model brings to the pool</h2>
+
+    <div class="model-grid">
+      <div class="model-card">
+        <div class="mc-header">
+          <div class="mc-dot gemini"></div>
+          <div>
+            <div class="mc-name">Gemini 2.5 Pro</div>
+            <div class="mc-sub">google/gemini-2.5-pro</div>
+          </div>
+        </div>
+        <ul>
+          <li>Best-in-class long context (1M tokens)</li>
+          <li>Strong multimodal (images, PDFs, video)</li>
+          <li>Excellent at coding and math</li>
+          <li>Native Google tool integrations</li>
+          <li>Deep research / document analysis</li>
+        </ul>
+        <div class="mc-cost">Included in <strong>$20/mo</strong> Gemini Advanced</div>
+      </div>
+
+      <div class="model-card">
+        <div class="mc-header">
+          <div class="mc-dot claude"></div>
+          <div>
+            <div class="mc-name">Claude Sonnet 4.5 / Opus 4</div>
+            <div class="mc-sub">claude-sonnet-4-5 · claude-opus-4</div>
+          </div>
+        </div>
+        <ul>
+          <li>Best nuanced reasoning and instruction following</li>
+          <li>Top-tier code generation and debugging</li>
+          <li>Excellent at writing and editing</li>
+          <li>Strong safety and refusal calibration</li>
+          <li>Extended thinking mode (Opus 4)</li>
+        </ul>
+        <div class="mc-cost">Included in <strong>$20/mo</strong> Claude Pro</div>
+      </div>
+
+      <div class="model-card">
+        <div class="mc-header">
+          <div class="mc-dot kimi"></div>
+          <div>
+            <div class="mc-name">Kimi 2.7 (K2)</div>
+            <div class="mc-sub">moonshot/kimi-k2 via OpenRouter</div>
+          </div>
+        </div>
+        <ul>
+          <li>128K context window — ideal for huge codebases</li>
+          <li>Strong at agentic and tool-use tasks</li>
+          <li>Fast inference at competitive pricing</li>
+          <li>Great at Chinese + multilingual tasks</li>
+          <li>Overflow route when subscriptions are full</li>
+        </ul>
+        <div class="mc-cost">Pay-per-token via OpenRouter · ~$<strong>0.50</strong>/M tokens</div>
+      </div>
+
+      <div class="model-card">
+        <div class="mc-header">
+          <div class="mc-dot deepseek"></div>
+          <div>
+            <div class="mc-name">DeepSeek Flash v4</div>
+            <div class="mc-sub">deepseek/deepseek-chat-v3-0324</div>
+          </div>
+        </div>
+        <ul>
+          <li>Extremely fast — lowest latency in the pool</li>
+          <li>Strongest bang-for-buck for simple tasks</li>
+          <li>Excellent coding assistant (open-weight class)</li>
+          <li>Cheap enough to use freely as fallback</li>
+          <li>Handles structured output (JSON mode) reliably</li>
+        </ul>
+        <div class="mc-cost">Pay-per-token via OpenRouter · ~$<strong>0.14</strong>/M tokens</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Latest model strategy ── -->
+<section>
+  <div class="container">
+    <div class="section-label">Staying Current</div>
+    <h2>How Kong keeps you on the latest models</h2>
+    <p class="section-sub">
+      New model versions ship every few weeks. Without a gateway, you update strings
+      everywhere. With Kong, you update one YAML file and restart.
+    </p>
+
+    <pre><span class="comment"># kong/kong.yml — update one place to upgrade every client simultaneously</span>
+<span class="key">x-models</span>: <span class="comment">&amp;models</span>
+  <span class="key">gemini_primary</span>:   <span class="str">"gemini-2.5-pro-preview-06-05"</span>  <span class="comment"># ← update here</span>
+  <span class="key">claude_primary</span>:   <span class="str">"claude-sonnet-4-5-20251001"</span>     <span class="comment"># ← update here</span>
+  <span class="key">claude_powerful</span>:  <span class="str">"claude-opus-4-5-20251101"</span>       <span class="comment"># ← update here</span>
+  <span class="key">kimi_overflow</span>:    <span class="str">"moonshot/kimi-k2"</span>               <span class="comment"># ← update here</span>
+  <span class="key">deepseek_fallback</span>:<span class="str">"deepseek/deepseek-chat-v3-0324"</span> <span class="comment"># ← update here</span>
+
+<span class="comment"># Every tool that routes through Kong picks up the change instantly.</span>
+<span class="comment"># Zero updates to any client code, script, or IDE plugin.</span></pre>
+
+    <div class="callout" style="margin-top:24px">
+      <h3>Why this matters</h3>
+      <p>
+        When Anthropic released Claude Sonnet 4.5 and later Opus 4, users on hard-coded
+        model strings had to update every integration manually. With Kong as the single
+        routing layer, <strong>changing the model string in kong.yml + one restart</strong>
+        upgrades your entire toolchain — VS Code, Obsidian, CLI scripts, browser extensions —
+        simultaneously.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ── Kong config snippet ── -->
+<section>
+  <div class="container">
+    <div class="section-label">The Kong Config</div>
+    <h2>Core routing logic in Kong's Lua plugin</h2>
+    <p class="section-sub">This runs on every request, sub-millisecond, before any LLM token is generated.</p>
+
+<pre><span class="comment">-- Quota thresholds</span>
+<span class="key">local</span> GEMINI_LIMIT  = 1500   <span class="comment">-- approx daily cap on $20 plan</span>
+<span class="key">local</span> CLAUDE_LIMIT  = 1000
+<span class="key">local</span> WARN_THRESHOLD = 0.80  <span class="comment">-- start switching at 80%</span>
+
+<span class="comment">-- Read today's counters from shared memory</span>
+<span class="key">local</span> counters = ngx.shared.quota_counters
+<span class="key">local</span> g_used = counters:get(<span class="str">"gemini_today"</span>) or 0
+<span class="key">local</span> c_used = counters:get(<span class="str">"claude_today"</span>) or 0
+
+<span class="key">local</span> g_pct = g_used / GEMINI_LIMIT
+<span class="key">local</span> c_pct = c_used / CLAUDE_LIMIT
+
+<span class="comment">-- Check for special routing signals</span>
+<span class="key">local</span> is_long_ctx  = #prompt > 100000
+<span class="key">local</span> is_multimodal = body.messages and has_image(body.messages)
+<span class="key">local</span> needs_opus   = prompt:lower():find(<span class="str">"deep analysis"</span>) or
+                      prompt:lower():find(<span class="str">"think carefully"</span>)
+
+<span class="comment">-- Decision tree</span>
+<span class="key">local</span> provider, model
+<span class="key">if</span> is_long_ctx <span class="key">then</span>
+  provider, model = <span class="str">"openrouter"</span>, MODELS.kimi_overflow
+<span class="key">elseif</span> is_multimodal <span class="key">then</span>
+  provider, model = <span class="str">"gemini"</span>,     MODELS.gemini_primary
+<span class="key">elseif</span> needs_opus <span class="key">and</span> c_pct < WARN_THRESHOLD <span class="key">then</span>
+  provider, model = <span class="str">"anthropic"</span>,  MODELS.claude_powerful
+<span class="key">elseif</span> g_pct < WARN_THRESHOLD <span class="key">then</span>
+  provider, model = <span class="str">"gemini"</span>,     MODELS.gemini_primary
+<span class="key">elseif</span> c_pct < WARN_THRESHOLD <span class="key">then</span>
+  provider, model = <span class="str">"anthropic"</span>,  MODELS.claude_primary
+<span class="key">elseif</span> g_pct < 1.0 <span class="key">or</span> c_pct < 1.0 <span class="key">then</span>
+  provider, model = <span class="str">"openrouter"</span>, MODELS.kimi_overflow
+<span class="key">else</span>
+  provider, model = <span class="str">"openrouter"</span>, MODELS.deepseek_fallback
+<span class="key">end</span>
+
+<span class="comment">-- Set headers for smart-router to act on</span>
+kong.service.request.set_header(<span class="str">"X-Provider"</span>, provider)
+kong.service.request.set_header(<span class="str">"X-Model"</span>,    model)
+counters:incr(provider .. <span class="str">"_today"</span>, 1, 0)</pre>
+  </div>
+</section>
+
+<!-- ── Value summary ── -->
+<section>
+  <div class="container">
+    <div class="section-label">The Bottom Line</div>
+    <h2>What you actually get</h2>
+
+    <div class="problem-list">
+      <div class="problem-item">
+        <div class="problem-icon">✅</div>
+        <div>
+          <h3>Your $40/month subscriptions get fully used before a cent goes to OpenRouter</h3>
+          <p>
+            Kong prioritises Gemini and Claude while they have quota. OpenRouter only
+            takes traffic when the subscriptions are near their limits. You extract
+            maximum value from the flat-rate plans you already pay for.
+          </p>
+        </div>
+      </div>
+      <div class="problem-item">
+        <div class="problem-icon">✅</div>
+        <div>
+          <h3>You never see a quota error again</h3>
+          <p>
+            The failover to Kimi or DeepSeek is automatic and silent. From the client's
+            perspective every request succeeds. The <code>x_routing</code> field in the
+            response tells you which model answered, but you don't have to act on it.
+          </p>
+        </div>
+      </div>
+      <div class="problem-item">
+        <div class="problem-icon">✅</div>
+        <div>
+          <h3>One config change upgrades every tool simultaneously</h3>
+          <p>
+            When Google ships Gemini 2.5 Ultra or Anthropic ships Claude Opus 5, you
+            update one line in <code>kong/kong.yml</code> and restart Kong. Your CLI,
+            IDE plugin, browser extension, and every script picks up the new model
+            automatically.
+          </p>
+        </div>
+      </div>
+      <div class="problem-item">
+        <div class="problem-icon">✅</div>
+        <div>
+          <h3>One endpoint replaces four browser tabs</h3>
+          <p>
+            Every client — VS Code Copilot, Continue.dev, Obsidian Smart Second Brain,
+            custom Python scripts — points to <code>http://localhost:8000/v1/chat/completions</code>.
+            No context switching. No re-pasting. No manual failover.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <h3>Total monthly spend: $40 flat + minimal OpenRouter overflow</h3>
+      <p>
+        In a typical month with smart quota management, <strong>OpenRouter overflow costs
+        less than $2–5</strong> — only triggered on heavy days when both subscriptions are
+        maxed out. The $40 subscriptions cover the vast majority of usage, and the
+        pay-per-token models handle the rest at rock-bottom rates.
+      </p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  Smart-Cost Multi-LLM Orchestrator &mdash; Kong Gateway PoC &mdash;
+  <a href="index.html">Overview</a> &nbsp;·&nbsp;
+  <a href="frontend/index.html">Live Demo</a> &nbsp;·&nbsp;
+  <a href="https://github.com/rifaterdemsahin/kong-gateway">GitHub</a>
+</footer>
+
+</body>
+</html>
