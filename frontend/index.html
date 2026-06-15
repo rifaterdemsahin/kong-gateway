@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Smart-Cost Multi-LLM Orchestrator</title>
+<title>Smart-Cost Multi-LLM Orchestrator — Live Demo</title>
 <style>
   :root {
     --bg: #0f1117;
@@ -12,417 +12,431 @@
     --border: #2e3348;
     --text: #e2e8f0;
     --muted: #7c8cb0;
-    --simple-color: #22c55e;
-    --complex-color: #f59e0b;
-    --simple-bg: #052e16;
-    --complex-bg: #451a03;
+    --green: #22c55e;
+    --amber: #f59e0b;
     --accent: #6366f1;
     --accent-hover: #818cf8;
     --user-bg: #1e3a5f;
+    --simple-bg: #052e16;
+    --complex-bg: #451a03;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
+    background: var(--bg); color: var(--text);
+    height: 100vh; display: flex; flex-direction: column;
   }
+
+  /* ── Demo banner ── */
+  .demo-banner {
+    background: #1e2035; border-bottom: 1px solid #3b4270;
+    padding: 6px 20px; display: flex; align-items: center; gap: 10px;
+    font-size: 12px; color: #818cf8; flex-shrink: 0;
+  }
+  .demo-banner .db-dot {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--green);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .demo-banner strong { color: var(--text); }
+  .demo-banner a { color: #818cf8; }
 
   /* ── Header ── */
   header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 14px 24px;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 20px;
+    background: var(--surface); border-bottom: 1px solid var(--border);
     flex-shrink: 0;
   }
   .logo {
-    width: 36px; height: 36px;
+    width: 34px; height: 34px;
     background: linear-gradient(135deg, var(--accent), #a855f7);
-    border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px;
+    border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 800; color: #fff;
   }
-  header h1 { font-size: 17px; font-weight: 600; letter-spacing: -0.3px; }
-  header p { font-size: 12px; color: var(--muted); margin-top: 1px; }
+  header h1 { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; }
+  header p  { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
   .kong-badge {
-    margin-left: auto;
-    background: #003471;
-    border: 1px solid #0052cc;
-    color: #60a5fa;
-    font-size: 11px;
-    font-weight: 600;
-    padding: 3px 10px;
-    border-radius: 20px;
-    letter-spacing: 0.3px;
+    background: #003471; border: 1px solid #0052cc; color: #60a5fa;
+    font-size: 11px; font-weight: 600; padding: 3px 10px;
+    border-radius: 20px; letter-spacing: 0.3px;
   }
+  .nav-links-header { display: flex; gap: 4px; }
+  .nav-links-header a {
+    padding: 4px 10px; border-radius: 6px; font-size: 12px; color: var(--muted);
+    text-decoration: none;
+  }
+  .nav-links-header a:hover { background: var(--surface2); color: var(--text); }
 
-  /* ── Main layout ── */
-  main {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-  }
+  /* ── Main ── */
+  main { display: flex; flex: 1; overflow: hidden; }
 
-  /* ── Chat panel ── */
-  .chat-panel {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-  }
+  /* ── Chat ── */
+  .chat-panel { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 
   #messages {
-    flex: 1;
-    overflow-y: auto;
-    padding: 20px 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
+    flex: 1; overflow-y: auto; padding: 18px 20px;
+    display: flex; flex-direction: column; gap: 14px;
   }
 
-  .message {
-    display: flex;
-    flex-direction: column;
-    max-width: 75%;
-    gap: 6px;
-  }
-  .message.user { align-self: flex-end; align-items: flex-end; }
+  .message { display: flex; flex-direction: column; max-width: 78%; gap: 5px; }
+  .message.user      { align-self: flex-end; align-items: flex-end; }
   .message.assistant { align-self: flex-start; align-items: flex-start; }
 
   .bubble {
-    padding: 12px 16px;
-    border-radius: 16px;
-    line-height: 1.55;
-    font-size: 14px;
-    white-space: pre-wrap;
-    word-break: break-word;
+    padding: 11px 15px; border-radius: 16px;
+    line-height: 1.6; font-size: 14px; white-space: pre-wrap; word-break: break-word;
   }
-  .message.user .bubble {
-    background: var(--user-bg);
-    border-bottom-right-radius: 4px;
-  }
-  .message.assistant .bubble {
-    background: var(--surface2);
-    border-bottom-left-radius: 4px;
-    border: 1px solid var(--border);
-  }
+  .message.user .bubble      { background: var(--user-bg); border-bottom-right-radius: 4px; }
+  .message.assistant .bubble { background: var(--surface2); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
 
+  /* routing decision card under each assistant message */
+  .route-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 13px; font-size: 12px;
+    display: flex; flex-direction: column; gap: 5px; min-width: 260px;
+  }
+  .route-card .rc-top { display: flex; align-items: center; gap: 8px; }
   .model-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 11px;
-    font-weight: 600;
-    padding: 3px 9px;
-    border-radius: 12px;
-    letter-spacing: 0.3px;
-    text-transform: uppercase;
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; font-weight: 700; padding: 2px 8px;
+    border-radius: 10px; text-transform: uppercase; letter-spacing: 0.3px;
   }
-  .model-badge.simple {
-    background: var(--simple-bg);
-    color: var(--simple-color);
-    border: 1px solid #166534;
-  }
-  .model-badge.complex {
-    background: var(--complex-bg);
-    color: var(--complex-color);
-    border: 1px solid #92400e;
-  }
-  .model-badge .dot {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: currentColor;
-  }
+  .model-badge.simple  { background: var(--simple-bg); color: var(--green); border: 1px solid #166534; }
+  .model-badge.complex { background: var(--complex-bg); color: var(--amber); border: 1px solid #92400e; }
+  .model-badge .dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+  .rc-reason { color: var(--muted); font-size: 11px; }
 
-  .cost-pill {
-    font-size: 11px;
-    color: var(--muted);
-    margin-top: 2px;
-  }
-  .cost-pill .saved { color: var(--simple-color); font-weight: 600; }
+  /* savings bar */
+  .savings-bar { margin-top: 4px; }
+  .sb-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-bottom: 3px; }
+  .sb-label .saved-amount { color: var(--green); font-weight: 700; }
+  .sb-track { background: var(--surface2); border-radius: 4px; height: 6px; overflow: hidden; }
+  .sb-fill  { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--green), #16a34a); transition: width 0.6s ease; }
+  .rc-tokens { font-size: 11px; color: var(--muted); }
 
   /* typing indicator */
   .typing-dots {
-    display: flex; gap: 4px; padding: 14px 18px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    border-bottom-left-radius: 4px;
-    width: fit-content;
+    display: flex; gap: 4px; padding: 12px 16px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 16px; border-bottom-left-radius: 4px; width: fit-content;
   }
   .typing-dots span {
-    width: 7px; height: 7px;
-    background: var(--muted);
-    border-radius: 50%;
+    width: 6px; height: 6px; background: var(--muted); border-radius: 50%;
     animation: bounce 1.2s infinite;
   }
   .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
   .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
-  @keyframes bounce {
-    0%, 60%, 100% { transform: translateY(0); }
-    30% { transform: translateY(-6px); }
+  @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-5px)} }
+
+  /* classifier badge shown during typing */
+  .classifying-badge {
+    font-size: 11px; color: var(--accent); padding: 2px 8px;
+    background: #1e2035; border: 1px solid #3b4270; border-radius: 10px;
+    animation: fadeIn 0.3s ease;
   }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+
+  /* ── Example chips ── */
+  .examples { padding: 0 20px 14px; display: flex; flex-direction: column; gap: 6px; }
+  .examples-label { font-size: 11px; color: var(--muted); }
+  .example-chips  { display: flex; flex-wrap: wrap; gap: 5px; }
+  .chip {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 18px; padding: 4px 11px; font-size: 12px;
+    cursor: pointer; color: var(--text); transition: border-color 0.15s, background 0.15s;
+  }
+  .chip:hover { border-color: var(--accent); background: #1e2035; }
+  .chip.s { border-color: #166534; color: var(--green); }
+  .chip.c { border-color: #92400e; color: var(--amber); }
 
   /* ── Input bar ── */
   .input-bar {
-    padding: 16px 24px;
-    border-top: 1px solid var(--border);
-    background: var(--surface);
-    display: flex;
-    gap: 10px;
-    flex-shrink: 0;
+    padding: 12px 20px; border-top: 1px solid var(--border);
+    background: var(--surface); display: flex; gap: 8px; flex-shrink: 0;
   }
   #prompt {
-    flex: 1;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    color: var(--text);
-    font-size: 14px;
-    padding: 10px 14px;
-    outline: none;
-    resize: none;
-    height: 44px;
-    max-height: 120px;
-    font-family: inherit;
-    transition: border-color 0.15s;
+    flex: 1; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; color: var(--text); font-size: 14px;
+    padding: 10px 14px; outline: none; resize: none;
+    height: 44px; max-height: 120px; font-family: inherit; transition: border-color 0.15s;
   }
   #prompt:focus { border-color: var(--accent); }
   #prompt::placeholder { color: var(--muted); }
-
   #send-btn {
-    background: var(--accent);
-    border: none;
-    border-radius: 10px;
-    color: #fff;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 600;
-    padding: 0 20px;
-    height: 44px;
-    transition: background 0.15s;
-    white-space: nowrap;
+    background: var(--accent); border: none; border-radius: 10px; color: #fff;
+    cursor: pointer; font-size: 14px; font-weight: 600;
+    padding: 0 20px; height: 44px; transition: background 0.15s; white-space: nowrap;
   }
   #send-btn:hover { background: var(--accent-hover); }
   #send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
   /* ── Stats sidebar ── */
   .stats-panel {
-    width: 280px;
-    border-left: 1px solid var(--border);
-    background: var(--surface);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    flex-shrink: 0;
+    width: 290px; border-left: 1px solid var(--border);
+    background: var(--surface); display: flex; flex-direction: column;
+    overflow: hidden; flex-shrink: 0;
   }
-
   .stats-header {
-    padding: 14px 18px;
-    font-size: 12px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    color: var(--muted);
-    border-bottom: 1px solid var(--border);
+    padding: 12px 16px; font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.8px;
+    color: var(--muted); border-bottom: 1px solid var(--border);
   }
+  .stats-body { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
 
-  .stats-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
+  /* big savings display */
+  .savings-hero {
+    background: #052e16; border: 1px solid #166534; border-radius: 12px; padding: 18px;
   }
+  .savings-hero .sh-label { font-size: 11px; color: #4ade80; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 4px; }
+  .savings-hero .sh-amount { font-size: 32px; font-weight: 800; color: var(--green); letter-spacing: -1px; line-height: 1; }
+  .savings-hero .sh-sub { font-size: 11px; color: #4ade80; margin-top: 4px; }
 
-  .stat-card {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 14px;
+  /* efficiency meter */
+  .efficiency-card {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 14px;
   }
-  .stat-card .label {
-    font-size: 11px;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-    margin-bottom: 6px;
-  }
-  .stat-card .value {
-    font-size: 24px;
-    font-weight: 700;
-    letter-spacing: -0.5px;
-  }
-  .stat-card .sub {
-    font-size: 12px;
-    color: var(--muted);
-    margin-top: 3px;
-  }
-  .stat-card.green .value { color: var(--simple-color); }
-  .stat-card.amber .value { color: var(--complex-color); }
+  .efficiency-card .ec-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; font-weight: 700; }
+  .efficiency-track { background: var(--surface); border-radius: 6px; height: 10px; overflow: hidden; margin-bottom: 6px; }
+  .efficiency-fill  { height: 100%; border-radius: 6px; background: linear-gradient(90deg, var(--green), #16a34a); transition: width 0.6s ease; }
+  .efficiency-card .ec-pct { font-size: 22px; font-weight: 800; color: var(--green); }
+  .efficiency-card .ec-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
 
-  .route-log {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+  /* model counter row */
+  .model-counters { display: flex; gap: 8px; }
+  .mc { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+  .mc .mc-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .mc .mc-value { font-size: 22px; font-weight: 800; }
+  .mc .mc-sub   { font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .mc.simple .mc-value { color: var(--green); }
+  .mc.complex .mc-value { color: var(--amber); }
+
+  /* cost compare */
+  .cost-compare {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 14px;
   }
-  .route-log .label {
-    font-size: 11px;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-    margin-bottom: 4px;
-  }
+  .cost-compare .cc-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; font-weight: 700; }
+  .cc-row { display: flex; justify-content: space-between; font-size: 12px; padding: 5px 0; border-bottom: 1px solid var(--border); }
+  .cc-row:last-child { border-bottom: none; }
+  .cc-row .cc-item  { color: var(--muted); }
+  .cc-row .cc-price { font-weight: 600; font-family: monospace; }
+  .cc-row .cc-price.actual   { color: var(--green); }
+  .cc-row .cc-price.hypothetical { color: var(--amber); }
+
+  /* route log */
+  .route-log-section .rl-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; font-weight: 700; }
   .route-entry {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 12px;
-    font-size: 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 9px 11px; font-size: 12px;
+    display: flex; flex-direction: column; gap: 3px; margin-bottom: 6px;
   }
-  .route-entry .re-model { font-weight: 600; }
-  .route-entry.simple .re-model { color: var(--simple-color); }
-  .route-entry.complex .re-model { color: var(--complex-color); }
-  .route-entry .re-reason { color: var(--muted); font-size: 11px; }
-  .route-entry .re-cost { color: var(--muted); font-size: 11px; }
+  .route-entry:last-child { margin-bottom: 0; }
+  .re-model { font-weight: 600; }
+  .route-entry.simple .re-model  { color: var(--green); }
+  .route-entry.complex .re-model { color: var(--amber); }
+  .re-detail { color: var(--muted); font-size: 11px; }
+  .re-saving { font-size: 11px; color: var(--green); font-weight: 600; }
 
-  .empty-state {
-    text-align: center;
-    color: var(--muted);
-    font-size: 13px;
-    padding: 20px 0;
-  }
-
-  /* ── Example prompts ── */
-  .examples {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 0 24px 20px;
-  }
-  .examples-label {
-    font-size: 12px;
-    color: var(--muted);
-    margin-bottom: 4px;
-  }
-  .example-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-  .chip {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 5px 12px;
-    font-size: 12px;
-    cursor: pointer;
-    color: var(--text);
-    transition: border-color 0.15s, background 0.15s;
-  }
-  .chip:hover { border-color: var(--accent); background: #1e2035; }
-  .chip.simple-chip { border-color: #166534; color: var(--simple-color); }
-  .chip.complex-chip { border-color: #92400e; color: var(--complex-color); }
+  .empty-state { text-align: center; color: var(--muted); font-size: 12px; padding: 16px 0; }
 </style>
 </head>
 <body>
+
+<!-- Demo banner -->
+<div class="demo-banner">
+  <div class="db-dot"></div>
+  <span><strong>Demo Mode</strong> — running fully in-browser with mock data. No backend needed.
+  Kong classifier logic runs in JavaScript. &nbsp;
+  <a href="../index.html">Learn how it works</a> &nbsp;·&nbsp;
+  <a href="../setup.html">Deploy for real</a></span>
+</div>
 
 <header>
   <div class="logo">K</div>
   <div>
     <h1>Smart-Cost Multi-LLM Orchestrator</h1>
-    <p>Kong Gateway routes each prompt to the most cost-effective model automatically</p>
+    <p>Kong classifies every prompt and routes to the cheapest model that can handle it</p>
   </div>
-  <span class="kong-badge">Kong Gateway</span>
+  <div class="header-right">
+    <div class="nav-links-header">
+      <a href="../index.html">Overview</a>
+      <a href="../use-case.html">Use Case</a>
+      <a href="../analysis.html">Analysis</a>
+    </div>
+    <span class="kong-badge">Kong Gateway</span>
+  </div>
 </header>
 
 <main>
-  <!-- Chat panel -->
+  <!-- ── Chat panel ── -->
   <div class="chat-panel">
     <div id="messages">
-      <div class="message assistant" id="welcome-msg">
+      <div class="message assistant">
         <div class="bubble">
-          Welcome! I'm the <strong>Smart-Cost Orchestrator</strong>.<br><br>
-          Send any message — Kong Gateway will inspect your prompt and silently route it to:
-          <ul style="margin: 10px 0 0 18px; line-height: 2;">
-            <li><strong style="color:#22c55e">gpt-4o-mini</strong> for lightweight tasks (summaries, Q&amp;A, translations)</li>
-            <li><strong style="color:#f59e0b">Claude 3.5 Sonnet</strong> for complex tasks (code, debugging, analysis)</li>
-          </ul>
-          <br>Try the example prompts below, or type your own.
+          Welcome to the <strong>Smart-Cost demo</strong> — running entirely in your browser.<br><br>
+          The same keyword classifier Kong uses in its Lua plugin is replicated here in JavaScript.
+          Send a message and watch it get routed to the right model automatically:<br><br>
+          <span style="color:var(--green)">●</span> <strong>GPT-4o-mini</strong> — lightweight tasks (Q&amp;A, summaries, translation)<br>
+          <span style="color:var(--amber)">●</span> <strong>Claude 3.5 Sonnet</strong> — complex tasks (code, debugging, analysis)<br><br>
+          Every routing decision shows you the <strong>cost saved</strong> vs. using Claude for everything.
         </div>
       </div>
     </div>
 
     <div class="examples">
-      <div class="examples-label">Try these examples:</div>
+      <div class="examples-label">Try these — green chips route to GPT-4o-mini, amber to Claude:</div>
       <div class="example-chips">
-        <span class="chip simple-chip" onclick="sendExample(this.textContent)">Summarize a paragraph</span>
-        <span class="chip simple-chip" onclick="sendExample(this.textContent)">Translate 'Hello' to French</span>
-        <span class="chip simple-chip" onclick="sendExample(this.textContent)">What is the capital of Japan?</span>
-        <span class="chip complex-chip" onclick="sendExample(this.textContent)">Debug this Python script: def add(a, b): return a - b</span>
-        <span class="chip complex-chip" onclick="sendExample(this.textContent)">Explain how a binary search tree works step by step</span>
-        <span class="chip complex-chip" onclick="sendExample(this.textContent)">Analyze the performance of a bubble sort algorithm</span>
+        <span class="chip s" onclick="useExample(this)">What is the capital of Japan?</span>
+        <span class="chip s" onclick="useExample(this)">Translate 'Good morning' to Spanish</span>
+        <span class="chip s" onclick="useExample(this)">Summarize this paragraph for me</span>
+        <span class="chip s" onclick="useExample(this)">What does REST stand for?</span>
+        <span class="chip c" onclick="useExample(this)">Debug this Python script: def add(a, b): return a - b</span>
+        <span class="chip c" onclick="useExample(this)">Explain how a binary search tree works step by step</span>
+        <span class="chip c" onclick="useExample(this)">Analyze the performance of bubble sort algorithm</span>
+        <span class="chip c" onclick="useExample(this)">Write a function to implement a linked list in JavaScript</span>
       </div>
     </div>
 
     <div class="input-bar">
-      <textarea id="prompt" placeholder="Type a message..." rows="1"></textarea>
+      <textarea id="prompt" placeholder="Type anything — Kong will classify and route it..." rows="1"></textarea>
       <button id="send-btn" onclick="sendMessage()">Send</button>
     </div>
   </div>
 
-  <!-- Stats sidebar -->
+  <!-- ── Stats sidebar ── -->
   <div class="stats-panel">
-    <div class="stats-header">Routing Analytics</div>
+    <div class="stats-header">Cost Analytics</div>
     <div class="stats-body">
-      <div class="stat-card green">
-        <div class="label">Total Saved</div>
-        <div class="value" id="stat-saved">$0.00</div>
-        <div class="sub" id="stat-saved-sub">vs. always using Claude</div>
+
+      <div class="savings-hero">
+        <div class="sh-label">Total Saved</div>
+        <div class="sh-amount" id="stat-saved">$0.000000</div>
+        <div class="sh-sub" id="stat-saved-sub">vs. always using Claude 3.5 Sonnet</div>
       </div>
 
-      <div style="display:flex; gap:10px;">
-        <div class="stat-card" style="flex:1">
-          <div class="label">Simple</div>
-          <div class="value" id="stat-simple" style="font-size:20px;">0</div>
-          <div class="sub">gpt-4o-mini</div>
+      <div class="efficiency-card">
+        <div class="ec-label">Cost Efficiency</div>
+        <div class="efficiency-track">
+          <div class="efficiency-fill" id="efficiency-bar" style="width:0%"></div>
         </div>
-        <div class="stat-card amber" style="flex:1">
-          <div class="label">Complex</div>
-          <div class="value" id="stat-complex" style="font-size:20px;">0</div>
-          <div class="sub">claude-3-5-sonnet</div>
+        <div class="ec-pct" id="efficiency-pct">—</div>
+        <div class="ec-sub" id="efficiency-sub">send a message to start</div>
+      </div>
+
+      <div class="model-counters">
+        <div class="mc simple">
+          <div class="mc-label">Simple</div>
+          <div class="mc-value" id="stat-simple">0</div>
+          <div class="mc-sub">gpt-4o-mini</div>
+        </div>
+        <div class="mc complex">
+          <div class="mc-label">Complex</div>
+          <div class="mc-value" id="stat-complex">0</div>
+          <div class="mc-sub">claude-sonnet</div>
         </div>
       </div>
 
-      <div class="route-log">
-        <div class="label">Routing History</div>
-        <div id="route-log-entries">
-          <div class="empty-state">No requests yet</div>
+      <div class="cost-compare">
+        <div class="cc-label">Cost Breakdown</div>
+        <div class="cc-row">
+          <span class="cc-item">Actual spend (smart routing)</span>
+          <span class="cc-price actual" id="cc-actual">$0.000000</span>
+        </div>
+        <div class="cc-row">
+          <span class="cc-item">If always Claude Sonnet</span>
+          <span class="cc-price hypothetical" id="cc-hypothetical">$0.000000</span>
+        </div>
+        <div class="cc-row">
+          <span class="cc-item">If always GPT-4o-mini</span>
+          <span class="cc-price" id="cc-cheapest" style="color:var(--muted)">$0.000000</span>
         </div>
       </div>
+
+      <div class="route-log-section">
+        <div class="rl-label">Routing History</div>
+        <div id="route-log"><div class="empty-state">No requests yet</div></div>
+      </div>
+
     </div>
   </div>
 </main>
 
 <script>
-const KONG_URL = 'http://localhost:8000/v1/chat/completions';
+// ─────────────────────────────────────────────────────────────────
+// MOCK CLASSIFIER — mirrors the Kong Lua pre-function plugin logic
+// ─────────────────────────────────────────────────────────────────
 
-let stats = { simple: 0, complex: 0, totalSaved: 0, totalCost: 0 };
-let routeLog = [];
+const COMPLEX_SIGNALS = [
+  'debug', 'bug', 'error', 'exception', 'traceback',
+  'fix', 'code', 'script', 'function', 'class', 'method',
+  'implement', 'refactor', 'write a program', 'write a function',
+  'write code', 'algorithm', 'optimize', 'performance', 'complexity',
+  'architecture', 'design pattern', 'system design',
+  'explain how', 'how does', 'why does', 'step by step', 'in detail',
+  'analyze', 'compare', 'evaluate', 'security', 'vulnerability',
+  'sql', 'database', 'api', 'endpoint', 'schema', 'linked list',
+  'binary search', 'sorting', 'recursion', 'data structure',
+];
 
-function sendExample(text) {
-  document.getElementById('prompt').value = text;
+const COSTS = {
+  'gpt-4o-mini':              { input: 0.00015,  output: 0.0006,  label: 'GPT-4o-mini' },
+  'claude-3-5-sonnet-20241022': { input: 0.003,  output: 0.015,   label: 'Claude 3.5 Sonnet' },
+};
+
+function classify(prompt) {
+  const t = prompt.toLowerCase();
+  for (const signal of COMPLEX_SIGNALS) {
+    if (t.includes(signal)) return { tier: 'complex', model: 'claude-3-5-sonnet-20241022', reason: `keyword: "${signal}"` };
+  }
+  if (prompt.length > 400) return { tier: 'complex', model: 'claude-3-5-sonnet-20241022', reason: `long prompt (${prompt.length} chars)` };
+  return { tier: 'simple', model: 'gpt-4o-mini', reason: 'default: lightweight task' };
+}
+
+function estimateTokens(text) { return Math.max(1, Math.ceil(text.split(/\s+/).length * 1.3)); }
+
+function calcCost(model, inTok, outTok) {
+  const c = COSTS[model];
+  return inTok / 1000 * c.input + outTok / 1000 * c.output;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// MOCK RESPONSES — realistic per-tier content
+// ─────────────────────────────────────────────────────────────────
+
+const SIMPLE_RESPONSES = [
+  (p) => `Sure! Here's a quick answer to your question about "${p.slice(0,40)}...".\n\nI'm GPT-4o-mini — the fast, cost-efficient model Kong routed you to because this is a lightweight task. For straightforward questions, Q&A, translations, and summaries I give you accurate results at a fraction of the cost of larger models.`,
+  (p) => `Great question! "${p.slice(0,50)}..." is exactly the kind of task I handle efficiently.\n\nI'm GPT-4o-mini. Kong's classifier analysed your prompt and determined it doesn't require deep reasoning, so I'm handling it instead of Claude Sonnet — saving you ~95% on this request.`,
+  (p) => `Here's your answer:\n\nYour prompt was classified as a simple task by Kong's Lua classifier (no complex keywords detected, prompt length under 400 chars). I'm GPT-4o-mini — optimised for speed and cost on tasks like this.\n\nIn a real deployment I would give you the full factual answer to "${p.slice(0,60)}..."`,
+];
+
+const COMPLEX_RESPONSES = [
+  (p) => `I'll give you a thorough answer on "${p.slice(0,50)}...".\n\nI'm Claude 3.5 Sonnet — Kong's classifier detected a complexity signal in your prompt (a keyword like "debug", "analyze", "code", "algorithm", or similar) and escalated this request to me.\n\nFor tasks requiring deep reasoning, code review, debugging, or multi-step analysis, I provide significantly better results than GPT-4o-mini, justifying the higher cost on requests like this one.`,
+  (p) => `Let me walk you through this step by step.\n\nKong identified your request as complex based on the prompt content. I'm Claude 3.5 Sonnet — the heavy-duty model in your pool, reserved for tasks that need nuanced understanding, code generation, or technical depth.\n\n**For your actual question** "${p.slice(0,80)}..." — in a real deployment with your Anthropic API key connected, I would provide a detailed, expert-level response here with code examples, explanations, and actionable recommendations.`,
+  (p) => `This is a great candidate for deep analysis.\n\nYour prompt triggered the complexity classifier because it contains technical signals. I'm Claude 3.5 Sonnet, and Kong made the right call escalating this to me instead of GPT-4o-mini.\n\n**What I would do with "${p.slice(0,60)}...":**\n- Break down the problem systematically\n- Provide working code or pseudocode\n- Explain trade-offs and edge cases\n- Suggest best practices\n\nConnect your Anthropic API key (see setup.html) to get the real answer.`,
+];
+
+function mockResponse(prompt, classification) {
+  const responses = classification.tier === 'complex' ? COMPLEX_RESPONSES : SIMPLE_RESPONSES;
+  const pick = responses[Math.floor(Math.random() * responses.length)];
+  return pick(prompt);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────────────────────────
+
+const state = { simple: 0, complex: 0, totalCost: 0, totalIfClaude: 0, totalIfCheap: 0, totalSaved: 0 };
+const log = [];
+
+// ─────────────────────────────────────────────────────────────────
+// SEND MESSAGE
+// ─────────────────────────────────────────────────────────────────
+
+function useExample(el) {
+  document.getElementById('prompt').value = el.textContent;
   sendMessage();
 }
 
@@ -433,116 +447,170 @@ async function sendMessage() {
 
   ta.value = '';
   ta.style.height = '44px';
-
-  appendMessage('user', text);
-  const typingEl = appendTyping();
-
   document.getElementById('send-btn').disabled = true;
 
-  try {
-    const res = await fetch(KONG_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'smart-cost',
-        messages: [{ role: 'user', content: text }]
-      })
-    });
+  addUserMsg(text);
 
-    if (!res.ok) {
-      const err = await res.text();
-      throw new Error(`${res.status}: ${err}`);
-    }
+  // Step 1: show classifier working
+  const classifyingEl = addClassifying();
+  await delay(400);
 
-    const data = await res.json();
-    const content = data.choices?.[0]?.message?.content ?? '(no response)';
-    const sc = data.x_smart_cost ?? {};
+  const cls = classify(text);
+  classifyingEl.querySelector('.classifying-badge').textContent =
+    `Kong: classified as ${cls.tier.toUpperCase()} → ${COSTS[cls.model].label}`;
 
-    typingEl.remove();
-    appendMessage('assistant', content, sc);
-    updateStats(sc);
-    addRouteLog(sc, text);
-  } catch (e) {
-    typingEl.remove();
-    appendMessage('assistant', `Error: ${e.message}\n\nMake sure the stack is running:\n  docker compose up --build`);
-  } finally {
-    document.getElementById('send-btn').disabled = false;
-  }
+  // Step 2: typing dots
+  await delay(300);
+  classifyingEl.remove();
+  const typingEl = addTyping();
+
+  // Step 3: simulate network delay
+  const thinkTime = cls.tier === 'complex' ? 900 + Math.random() * 600 : 400 + Math.random() * 300;
+  await delay(thinkTime);
+
+  typingEl.remove();
+
+  // Step 4: generate mock response + costs
+  const content = mockResponse(text, cls);
+  const inTok  = estimateTokens(text);
+  const outTok = estimateTokens(content);
+  const altModel = cls.tier === 'simple' ? 'claude-3-5-sonnet-20241022' : 'gpt-4o-mini';
+
+  const cost    = calcCost(cls.model, inTok, outTok);
+  const altCost = calcCost(altModel,  inTok, outTok);
+  const saved   = cls.tier === 'simple' ? altCost - cost : 0;
+  const savePct = altCost > 0 ? Math.round(saved / altCost * 100) : 0;
+
+  const sc = {
+    tier: cls.tier, model: cls.model,
+    label: COSTS[cls.model].label,
+    reason: cls.reason,
+    cost, altCost, saved, savePct,
+    inTok, outTok,
+    altModel: COSTS[altModel].label,
+  };
+
+  addAssistantMsg(content, sc);
+  updateState(sc, inTok, outTok, altModel);
+  addLogEntry(sc, text);
+
+  document.getElementById('send-btn').disabled = false;
 }
 
-function appendMessage(role, content, sc) {
+// ─────────────────────────────────────────────────────────────────
+// DOM HELPERS
+// ─────────────────────────────────────────────────────────────────
+
+function addUserMsg(text) {
   const msgs = document.getElementById('messages');
-  const msg = document.createElement('div');
-  msg.className = `message ${role}`;
-
-  let inner = `<div class="bubble">${escHtml(content)}</div>`;
-
-  if (role === 'assistant' && sc && sc.tier) {
-    const tier = sc.tier;
-    const label = sc.model_used_label ?? sc.model_used ?? tier;
-    inner += `<div class="model-badge ${tier}"><span class="dot"></span>${label}</div>`;
-    if (sc.savings_usd > 0) {
-      inner += `<div class="cost-pill">Cost: $${fmt(sc.cost_usd)} · <span class="saved">Saved $${fmt(sc.savings_usd)} (${sc.savings_pct}%)</span> vs ${sc.alternative_model}</div>`;
-    } else {
-      inner += `<div class="cost-pill">Cost: $${fmt(sc.cost_usd)} · ${sc.input_tokens ?? '?'} in + ${sc.output_tokens ?? '?'} out tokens</div>`;
-    }
-  }
-
-  msg.innerHTML = inner;
-  msgs.appendChild(msg);
-  msgs.scrollTop = msgs.scrollHeight;
+  const el = document.createElement('div');
+  el.className = 'message user';
+  el.innerHTML = `<div class="bubble">${esc(text)}</div>`;
+  msgs.appendChild(el);
+  scroll();
 }
 
-function appendTyping() {
+function addClassifying() {
   const msgs = document.getElementById('messages');
-  const wrap = document.createElement('div');
-  wrap.className = 'message assistant';
-  wrap.innerHTML = `<div class="typing-dots"><span></span><span></span><span></span></div>`;
-  msgs.appendChild(wrap);
-  msgs.scrollTop = msgs.scrollHeight;
-  return wrap;
+  const el = document.createElement('div');
+  el.className = 'message assistant';
+  el.innerHTML = `<span class="classifying-badge">Kong: classifying prompt...</span>`;
+  msgs.appendChild(el);
+  scroll();
+  return el;
 }
 
-function updateStats(sc) {
-  if (!sc || !sc.tier) return;
-  stats[sc.tier] = (stats[sc.tier] ?? 0) + 1;
-  stats.totalSaved += sc.savings_usd ?? 0;
-  stats.totalCost += sc.cost_usd ?? 0;
-
-  document.getElementById('stat-simple').textContent = stats.simple;
-  document.getElementById('stat-complex').textContent = stats.complex;
-  document.getElementById('stat-saved').textContent = `$${fmt(stats.totalSaved, 6)}`;
-  document.getElementById('stat-saved-sub').textContent =
-    `Total spent: $${fmt(stats.totalCost, 6)}`;
+function addTyping() {
+  const msgs = document.getElementById('messages');
+  const el = document.createElement('div');
+  el.className = 'message assistant';
+  el.innerHTML = `<div class="typing-dots"><span></span><span></span><span></span></div>`;
+  msgs.appendChild(el);
+  scroll();
+  return el;
 }
 
-function addRouteLog(sc, prompt) {
-  if (!sc || !sc.tier) return;
-  routeLog.unshift({ sc, prompt: prompt.slice(0, 40) + (prompt.length > 40 ? '…' : '') });
+function addAssistantMsg(content, sc) {
+  const msgs = document.getElementById('messages');
+  const el = document.createElement('div');
+  el.className = 'message assistant';
 
-  const container = document.getElementById('route-log-entries');
-  container.innerHTML = routeLog.slice(0, 8).map(({ sc: s, prompt: p }) => `
+  const barWidth = sc.tier === 'simple' ? sc.savePct : 0;
+  const savedLine = sc.tier === 'simple'
+    ? `<div class="re-saving">Saved $${fmtC(sc.saved)} (${sc.savePct}%) vs ${sc.altModel}</div>`
+    : `<div class="re-detail" style="color:var(--amber)">Best model for this task — full quality justified</div>`;
+
+  el.innerHTML = `
+    <div class="bubble">${esc(content)}</div>
+    <div class="route-card">
+      <div class="rc-top">
+        <div class="model-badge ${sc.tier}"><span class="dot"></span>${sc.label}</div>
+        <div class="rc-reason">${esc(sc.reason)}</div>
+      </div>
+      <div class="savings-bar">
+        <div class="sb-label">
+          <span>Cost: $${fmtC(sc.cost)}</span>
+          ${sc.tier === 'simple' ? `<span class="saved-amount">Saved $${fmtC(sc.saved)} (${sc.savePct}%)</span>` : `<span style="color:var(--amber)">Optimal model used</span>`}
+        </div>
+        <div class="sb-track"><div class="sb-fill" style="width:${barWidth}%"></div></div>
+      </div>
+      <div class="rc-tokens">${sc.inTok} input + ${sc.outTok} output tokens</div>
+      ${savedLine}
+    </div>`;
+
+  msgs.appendChild(el);
+  scroll();
+}
+
+function updateState(sc, inTok, outTok, altModel) {
+  state[sc.tier]++;
+  state.totalCost     += sc.cost;
+  state.totalIfClaude += calcCost('claude-3-5-sonnet-20241022', inTok, outTok);
+  state.totalIfCheap  += calcCost('gpt-4o-mini', inTok, outTok);
+  state.totalSaved     = state.totalIfClaude - state.totalCost;
+
+  document.getElementById('stat-saved').textContent    = `$${fmtC(state.totalSaved)}`;
+  document.getElementById('stat-saved-sub').textContent = `vs. always using Claude 3.5 Sonnet`;
+  document.getElementById('stat-simple').textContent   = state.simple;
+  document.getElementById('stat-complex').textContent  = state.complex;
+  document.getElementById('cc-actual').textContent     = `$${fmtC(state.totalCost)}`;
+  document.getElementById('cc-hypothetical').textContent = `$${fmtC(state.totalIfClaude)}`;
+  document.getElementById('cc-cheapest').textContent   = `$${fmtC(state.totalIfCheap)}`;
+
+  const pct = state.totalIfClaude > 0
+    ? Math.round(state.totalSaved / state.totalIfClaude * 100) : 0;
+  document.getElementById('efficiency-pct').textContent = `${pct}% cheaper`;
+  document.getElementById('efficiency-sub').textContent =
+    `${state.simple + state.complex} request${state.simple + state.complex !== 1 ? 's' : ''} routed`;
+  document.getElementById('efficiency-bar').style.width = `${Math.min(pct, 100)}%`;
+}
+
+function addLogEntry(sc, prompt) {
+  log.unshift({ sc, prompt: prompt.slice(0, 38) + (prompt.length > 38 ? '…' : '') });
+  const container = document.getElementById('route-log');
+  container.innerHTML = log.slice(0, 10).map(({ sc: s, prompt: p }) => `
     <div class="route-entry ${s.tier}">
-      <div class="re-model">${s.model_used_label ?? s.model_used}</div>
-      <div class="re-reason">Reason: ${s.classifier_reason ?? s.tier}</div>
-      <div class="re-cost">"${p}" · $${fmt(s.cost_usd)}</div>
-    </div>
-  `).join('');
+      <div class="re-model">${s.label}</div>
+      <div class="re-detail">"${esc(p)}"</div>
+      <div class="re-detail">${esc(s.reason)}</div>
+      ${s.tier === 'simple' ? `<div class="re-saving">saved $${fmtC(s.saved)} (${s.savePct}%)</div>` : `<div class="re-detail" style="color:var(--amber)">cost: $${fmtC(s.cost)}</div>`}
+    </div>`).join('');
 }
 
-function fmt(n, decimals = 8) {
-  if (n == null || isNaN(n)) return '0.00';
-  if (n === 0) return '0.00';
-  if (n < 0.000001) return n.toFixed(decimals);
-  if (n < 0.01) return n.toFixed(6);
+// ─────────────────────────────────────────────────────────────────
+// UTILS
+// ─────────────────────────────────────────────────────────────────
+
+function fmtC(n) {
+  if (!n || n === 0) return '0.000000';
+  if (n < 0.0001) return n.toFixed(8);
+  if (n < 0.01)   return n.toFixed(6);
   return n.toFixed(4);
 }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function scroll() { const m = document.getElementById('messages'); m.scrollTop = m.scrollHeight; }
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-function escHtml(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-// Auto-resize textarea
 document.getElementById('prompt').addEventListener('input', function() {
   this.style.height = '44px';
   this.style.height = Math.min(this.scrollHeight, 120) + 'px';
