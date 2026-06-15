@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pros, Cons & Latency — Smart-Cost Kong Gateway</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3348;
+    --text: #e2e8f0;
+    --muted: #7c8cb0;
+    --accent: #6366f1;
+    --green: #22c55e;
+    --amber: #f59e0b;
+    --red: #ef4444;
+    --blue: #3b82f6;
+    --code-bg: #12141f;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(15,17,23,0.92); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px; display: flex; align-items: center; height: 52px;
+  }
+  .nav-logo { font-size: 15px; font-weight: 700; color: var(--text); margin-right: 28px; text-decoration: none; }
+  .nav-logo:hover { color: var(--accent); text-decoration: none; }
+  .nav-links { display: flex; gap: 4px; flex: 1; flex-wrap: wrap; }
+  .nav-link { padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--muted); text-decoration: none; white-space: nowrap; }
+  .nav-link:hover { background: var(--surface2); color: var(--text); text-decoration: none; }
+  .nav-link.active { background: var(--surface2); color: var(--text); }
+  .nav-actions { margin-left: auto; flex-shrink: 0; }
+  .nav-btn { padding: 5px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; background: var(--accent); color: #fff; text-decoration: none; display: inline-block; }
+  .nav-btn:hover { background: #818cf8; text-decoration: none; }
+
+  .hero {
+    background: linear-gradient(160deg, #0f1117 0%, #1a1530 50%, #0f1117 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 64px 24px 52px; text-align: center;
+  }
+  .hero .badge { display: inline-flex; align-items: center; gap: 6px; background: #1e2235; border: 1px solid #3b4270; border-radius: 20px; padding: 4px 14px; font-size: 12px; font-weight: 600; color: #818cf8; letter-spacing: 0.5px; margin-bottom: 22px; }
+  .hero h1 { font-size: clamp(26px, 4.5vw, 46px); font-weight: 800; letter-spacing: -1.2px; line-height: 1.15; margin-bottom: 18px; }
+  .hero h1 em { font-style: normal; color: var(--accent); }
+  .hero p { font-size: 17px; color: var(--muted); max-width: 600px; margin: 0 auto 28px; }
+  .toc { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .toc a { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 6px 14px; font-size: 13px; color: var(--muted); }
+  .toc a:hover { border-color: var(--accent); color: var(--text); text-decoration: none; }
+
+  .container { max-width: 900px; margin: 0 auto; padding: 0 24px; }
+  section { padding: 60px 0; border-bottom: 1px solid var(--border); }
+  section:last-of-type { border-bottom: none; }
+  .section-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); margin-bottom: 8px; }
+  h2 { font-size: 26px; font-weight: 700; letter-spacing: -0.4px; margin-bottom: 8px; }
+  h3 { font-size: 18px; font-weight: 600; margin-bottom: 12px; margin-top: 28px; }
+  h3:first-of-type { margin-top: 0; }
+  .section-sub { color: var(--muted); font-size: 15px; margin-bottom: 32px; }
+  p { margin-bottom: 14px; color: var(--muted); font-size: 14px; }
+  p strong { color: var(--text); }
+  p:last-child { margin-bottom: 0; }
+
+  code { font-family: "SF Mono", "Fira Code", monospace; background: var(--surface2); border: 1px solid var(--border); padding: 1px 6px; border-radius: 4px; font-size: 12px; color: #a5b4fc; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px; padding: 20px 24px; overflow-x: auto; font-size: 13px; line-height: 1.7; font-family: "SF Mono", "Fira Code", monospace; color: #c9d1d9; margin: 16px 0; }
+  pre .c  { color: #6b7a99; }
+  pre .s  { color: #a5d6ff; }
+  pre .v  { color: #ffa657; }
+
+  /* ── Pros / Cons ── */
+  .pc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 24px; }
+  .pc-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; }
+  .pc-card.pros { border-top: 3px solid var(--green); }
+  .pc-card.cons { border-top: 3px solid var(--red); }
+  .pc-card h3 { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 16px; margin-top: 0; }
+  .pc-card.pros h3 { color: var(--green); }
+  .pc-card.cons h3 { color: var(--red); }
+  .pc-item { display: flex; gap: 10px; margin-bottom: 12px; font-size: 13px; }
+  .pc-item:last-child { margin-bottom: 0; }
+  .pc-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+  .pc-item .pc-text { color: var(--muted); line-height: 1.5; }
+  .pc-item .pc-text strong { color: var(--text); }
+
+  /* ── Latency timeline ── */
+  .latency-timeline { margin-top: 28px; }
+  .lt-row { display: flex; align-items: center; gap: 0; margin-bottom: 10px; }
+  .lt-label { font-size: 12px; color: var(--muted); width: 200px; flex-shrink: 0; font-weight: 500; }
+  .lt-bar-wrap { flex: 1; background: var(--surface2); border-radius: 6px; height: 24px; overflow: hidden; position: relative; }
+  .lt-bar { height: 100%; border-radius: 6px; display: flex; align-items: center; padding-left: 8px; font-size: 11px; font-weight: 700; white-space: nowrap; transition: width 1s ease; }
+  .lt-bar.kong-classify { background: #312e81; color: #a5b4fc; }
+  .lt-bar.network-hop   { background: #1e3a5f; color: #60a5fa; }
+  .lt-bar.llm-simple    { background: #052e16; color: #22c55e; }
+  .lt-bar.llm-complex   { background: #451a03; color: #f59e0b; }
+  .lt-bar.llm-streaming { background: #1a1530; color: #a855f7; }
+  .lt-total { font-size: 11px; color: var(--muted); margin-left: 10px; white-space: nowrap; }
+  .latency-note { font-size: 12px; color: var(--muted); margin-top: 8px; }
+
+  .latency-breakdown {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 24px; margin-top: 24px;
+  }
+  .lb-row { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+  .lb-row:last-child { border-bottom: none; }
+  .lb-row .lb-label { color: var(--muted); }
+  .lb-row .lb-val   { font-weight: 600; font-family: monospace; }
+  .lb-row .lb-val.fast   { color: var(--green); }
+  .lb-row .lb-val.medium { color: var(--amber); }
+  .lb-row .lb-val.slow   { color: var(--red); }
+  .lb-row .lb-note { font-size: 11px; color: var(--muted); margin-left: 12px; }
+
+  /* ── Subscription explainer ── */
+  .sub-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 24px; margin-bottom: 16px;
+  }
+  .sub-card .sc-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+  .sub-card .sc-name { font-size: 16px; font-weight: 700; }
+  .sub-card .sc-price { font-size: 14px; font-weight: 700; color: var(--accent); }
+  .sub-type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+  .sub-type { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
+  .sub-type .st-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .sub-type.web-access .st-label  { color: var(--amber); }
+  .sub-type.api-access .st-label  { color: var(--green); }
+  .sub-type ul { padding-left: 14px; }
+  .sub-type li { font-size: 12px; color: var(--muted); margin-bottom: 3px; }
+  .sub-type li strong { color: var(--text); }
+
+  /* ── Strategy cards ── */
+  .strategy-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-top: 24px; }
+  .strategy-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 22px; }
+  .strategy-card .s-num { width: 28px; height: 28px; border-radius: 50%; background: var(--surface2); border: 2px solid var(--accent); color: var(--accent); font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; }
+  .strategy-card h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; margin-top: 0; }
+  .strategy-card p { font-size: 13px; }
+  .strategy-card .s-cost { font-size: 12px; color: var(--green); font-weight: 600; margin-top: 8px; }
+
+  /* ── Boxes ── */
+  .info-box  { background: #1e2035; border: 1px solid #3b4270; border-radius: 10px; padding: 16px 20px; font-size: 14px; color: var(--muted); margin: 16px 0; }
+  .warn-box  { background: #451a03; border: 1px solid #92400e; border-radius: 10px; padding: 16px 20px; font-size: 14px; color: var(--amber); margin: 16px 0; }
+  .ok-box    { background: #052e16; border: 1px solid #166534; border-radius: 10px; padding: 16px 20px; font-size: 14px; color: var(--green); margin: 16px 0; }
+  .info-box strong, .warn-box strong, .ok-box strong { color: var(--text); }
+
+  /* ── Summary table ── */
+  .summary-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 24px; }
+  .summary-table th { text-align: left; padding: 10px 14px; color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
+  .summary-table td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .summary-table tr:last-child td { border-bottom: none; }
+  .summary-table tr:hover td { background: var(--surface2); }
+  .tag-g { color: #22c55e; font-weight: 600; }
+  .tag-a { color: var(--amber); font-weight: 600; }
+  .tag-r { color: var(--red); font-weight: 600; }
+
+  footer { padding: 40px 24px; text-align: center; color: var(--muted); font-size: 13px; border-top: 1px solid var(--border); }
+
+  @media (max-width: 640px) {
+    .pc-grid { grid-template-columns: 1fr; }
+    .sub-type-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-logo">K Smart-Cost</a>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">Overview</a>
+    <a href="use-case.html" class="nav-link">My $40/mo Setup</a>
+    <a href="setup.html" class="nav-link">Deploy</a>
+    <a href="analysis.html" class="nav-link active">Analysis</a>
+    <a href="frontend/index.html" class="nav-link">Live Demo</a>
+  </div>
+  <div class="nav-actions">
+    <a href="frontend/index.html" class="nav-btn">Open Chat</a>
+  </div>
+</nav>
+
+<div class="hero">
+  <div class="badge">Deep Dive</div>
+  <h1>Pros, Cons, Latency<br>& <em>Your Subscriptions</em></h1>
+  <p>
+    What Kong actually adds (and costs) end-to-end — and the honest answer
+    about how your Claude Pro and Gemini Advanced subscriptions fit in.
+  </p>
+  <div class="toc">
+    <a href="#proscons">Pros &amp; Cons</a>
+    <a href="#latency">Latency</a>
+    <a href="#subscriptions">Subscription Plans</a>
+    <a href="#strategies">Strategies</a>
+    <a href="#recommendation">Recommendation</a>
+  </div>
+</div>
+
+<!-- ── Pros & Cons ── -->
+<section id="proscons">
+  <div class="container">
+    <div class="section-label">Trade-offs</div>
+    <h2>Pros and cons of adding Kong to your setup</h2>
+    <p class="section-sub">
+      Kong is a real piece of infrastructure. It solves genuine problems but also adds
+      cost and complexity. Here's the honest picture.
+    </p>
+
+    <div class="pc-grid">
+      <div class="pc-card pros">
+        <h3>Pros</h3>
+
+        <div class="pc-item">
+          <div class="pc-icon">✅</div>
+          <div class="pc-text"><strong>One endpoint for every tool.</strong> VS Code, CLI, Obsidian, custom scripts — they all point to <code>localhost:8000</code>. No more switching tabs or re-pasting context.</div>
+        </div>
+        <div class="pc-item">
+          <div class="pc-icon">✅</div>
+          <div class="pc-text"><strong>Automatic quota management.</strong> Kong tracks daily usage per provider in shared memory and silently fails over when a limit approaches. You never see a quota error mid-session.</div>
+        </div>
+        <div class="pc-item">
+          <div class="pc-icon">✅</div>
+          <div class="pc-text"><strong>Change models in one place.</strong> New Gemini version ships? Edit one line in <code>kong/kong.yml</code>, restart Kong. Every tool is upgraded instantly.</div>
+        </div>
+        <div class="pc-item">
+          <div class="pc-icon">✅</div>
+          <div class="pc-text"><strong>API key security.</strong> Keys live in Kong (or Key Vault on Azure). No client ever holds a key. If a script leaks, there's nothing to steal.</div>
+        </div>
+        <div class="pc-item">
+          <div class="pc-icon">✅</div>
+          <div class="pc-text"><strong>Rate limiting built-in.</strong> Prevents a runaway script from exhausting your monthly OpenRouter budget in an hour.</div>
+        </div>
+        <div class="pc-item">
+          <div class="pc-icon">✅</div>
+          <div class="pc-text"><strong>Cost optimisation.</strong> Simple prompts route to cheap models. Complex ones escalate. Estimated 60–80% reduction in OpenRouter spend vs. always using the premium model.</div>
+        </div>
+        <div class="pc-item">
+          <div class="pc-icon">✅</div>
+          <div class="pc-text"><strong>Vendor independence.</strong> Swap any provider in 5 minutes by editing the Kong config. No code changes in any client.</div>
+        </div>
+        <div class="pc-item">
+          <div class="pc-icon">✅</div>
+          <div class="pc-text"><strong>Request logging.</strong> Every call is logged with which model was used, tokens consumed, and routing reason. Full auditability.</div>
+        </div>
+      </div>
+
+      <div class="pc-card cons">
+        <h3>Cons</h3>
+
+        <div class="pc-item">
+          <div class="pc-icon">⚠️</div>
+          <div class="pc-text"><strong>Extra infrastructure cost.</strong> ~$10–40/month on Fly.io or Azure. On top of your $40 in subscriptions, that's $50–80/mo total before any per-token LLM spend.</div>
+        </div>
+        <div class="pc-item">
+          <div class="pc-icon">⚠️</div>
+          <div class="pc-text"><strong>New single point of failure.</strong> If Kong crashes, every client breaks. Local Docker-based Kong avoids this for personal use.</div>
+        </div>
+        <div class="pc-item">
+          <div class="pc-icon">⚠️</div>
+          <div class="pc-text"><strong>Added latency.</strong> ~5–15ms per request (see the Latency section). Negligible against LLM response times but worth understanding.</div>
+        </div>
+        <div class="pc-item">
+          <div class="pc-icon">⚠️</div>
+          <div class="pc-text"><strong>Claude Pro and Gemini Advanced do NOT give API access.</strong> These web subscriptions can't be routed through Kong. You need separate API keys — which are pay-per-token (see Subscriptions section below).</div>
+        </div>
+        <div class="pc-item">
+          <div class="pc-icon">⚠️</div>
+          <div class="pc-text"><strong>Config maintenance.</strong> Model strings go stale. Providers change their API formats. Kong YAML needs occasional updates.</div>
+        </div>
+        <div class="pc-item">
+          <div class="pc-icon">⚠️</div>
+          <div class="pc-text"><strong>Keyword classifier is simple.</strong> A heuristic Lua script misclassifies some prompts. A sophisticated routing service would need a separate ML classifier (extra cost and latency).</div>
+        </div>
+        <div class="pc-item">
+          <div class="pc-icon">⚠️</div>
+          <div class="pc-text"><strong>Overkill for pure personal use.</strong> If you only use one tool (Claude.ai or Gemini.google.com) manually, Kong adds complexity with no benefit.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Latency ── -->
+<section id="latency">
+  <div class="container">
+    <div class="section-label">Latency</div>
+    <h2>How much does Kong add?</h2>
+    <p class="section-sub">
+      Short answer: <strong>5–15ms of Kong overhead</strong> on requests that take 300ms–30,000ms to complete.
+      That's 0.05% to 5% overhead — generally imperceptible.
+    </p>
+
+    <h3>End-to-end breakdown (one request)</h3>
+    <div class="latency-breakdown">
+      <div class="lb-row">
+        <span class="lb-label">Client → Kong (local Docker)</span>
+        <span class="lb-val fast">&lt;1 ms</span>
+        <span class="lb-note">loopback, negligible</span>
+      </div>
+      <div class="lb-row">
+        <span class="lb-label">Client → Kong (Fly.io, same region)</span>
+        <span class="lb-val fast">5–15 ms</span>
+        <span class="lb-note">single network hop via Fly's Anycast</span>
+      </div>
+      <div class="lb-row">
+        <span class="lb-label">Client → Kong (Azure, same region)</span>
+        <span class="lb-val fast">5–20 ms</span>
+        <span class="lb-note">Azure Container Apps ingress</span>
+      </div>
+      <div class="lb-row">
+        <span class="lb-label">Kong Lua pre-function (classify prompt)</span>
+        <span class="lb-val fast">&lt;1 ms</span>
+        <span class="lb-note">in-process, pure Lua regex, no I/O</span>
+      </div>
+      <div class="lb-row">
+        <span class="lb-label">Kong → Smart Router (internal network)</span>
+        <span class="lb-val fast">1–3 ms</span>
+        <span class="lb-note">same datacenter, private network</span>
+      </div>
+      <div class="lb-row">
+        <span class="lb-label">Smart Router → OpenAI (gpt-4o-mini) TTFB</span>
+        <span class="lb-val fast">300–600 ms</span>
+        <span class="lb-note">time-to-first-byte, fast model</span>
+      </div>
+      <div class="lb-row">
+        <span class="lb-label">Smart Router → Anthropic (claude-sonnet) TTFB</span>
+        <span class="lb-val medium">500–1,500 ms</span>
+        <span class="lb-note">time-to-first-byte, heavier model</span>
+      </div>
+      <div class="lb-row">
+        <span class="lb-label">Smart Router → OpenRouter (kimi / deepseek) TTFB</span>
+        <span class="lb-val medium">400–900 ms</span>
+        <span class="lb-note">varies by provider load</span>
+      </div>
+      <div class="lb-row">
+        <span class="lb-label">Total streaming response (simple, 200 tokens)</span>
+        <span class="lb-val fast">1–3 sec</span>
+        <span class="lb-note">gpt-4o-mini streams fast</span>
+      </div>
+      <div class="lb-row">
+        <span class="lb-label">Total streaming response (complex, 500 tokens)</span>
+        <span class="lb-val medium">5–20 sec</span>
+        <span class="lb-note">claude-sonnet, longer output</span>
+      </div>
+    </div>
+
+    <h3 style="margin-top:32px;">Visual comparison: Kong overhead vs LLM time</h3>
+
+    <div class="latency-timeline">
+      <div class="lt-row">
+        <div class="lt-label" style="font-size:11px;">Kong classify + route</div>
+        <div class="lt-bar-wrap">
+          <div class="lt-bar kong-classify" style="width:0.5%">~2ms</div>
+        </div>
+        <div class="lt-total">~2 ms</div>
+      </div>
+      <div class="lt-row">
+        <div class="lt-label" style="font-size:11px;">Network to Kong (cloud)</div>
+        <div class="lt-bar-wrap">
+          <div class="lt-bar network-hop" style="width:1.5%">10ms</div>
+        </div>
+        <div class="lt-total">~10 ms</div>
+      </div>
+      <div class="lt-row">
+        <div class="lt-label" style="font-size:11px;">gpt-4o-mini response</div>
+        <div class="lt-bar-wrap">
+          <div class="lt-bar llm-simple" style="width:30%">500ms</div>
+        </div>
+        <div class="lt-total">~500 ms</div>
+      </div>
+      <div class="lt-row">
+        <div class="lt-label" style="font-size:11px;">claude-sonnet response</div>
+        <div class="lt-bar-wrap">
+          <div class="lt-bar llm-complex" style="width:60%">1,000ms</div>
+        </div>
+        <div class="lt-total">~1,000 ms</div>
+      </div>
+      <div class="lt-row">
+        <div class="lt-label" style="font-size:11px;">claude-opus full response</div>
+        <div class="lt-bar-wrap">
+          <div class="lt-bar llm-streaming" style="width:100%">~15,000ms</div>
+        </div>
+        <div class="lt-total">~15 sec</div>
+      </div>
+    </div>
+
+    <div class="ok-box" style="margin-top:20px;">
+      <strong>Kong's 5–15ms overhead is 0.05–5% of total request time.</strong>
+      Against LLM response times of 500ms to 15 seconds, this is completely imperceptible.
+      You will never notice Kong in the latency profile.
+    </div>
+
+    <h3>What DOES affect latency</h3>
+    <p>The factors that actually matter for perceived speed:</p>
+
+    <table class="summary-table">
+      <thead><tr><th>Factor</th><th>Impact</th><th>Your control</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Which model is chosen</strong></td>
+          <td>gpt-4o-mini is 3–5× faster than Claude Sonnet</td>
+          <td class="tag-g">High — Kong's classifier decides this</td>
+        </tr>
+        <tr>
+          <td><strong>Output token length</strong></td>
+          <td>More tokens = longer streaming time</td>
+          <td class="tag-a">Medium — set <code>max_tokens</code> in request</td>
+        </tr>
+        <tr>
+          <td><strong>Streaming vs. non-streaming</strong></td>
+          <td>Streaming feels 3–10× faster (first token faster)</td>
+          <td class="tag-g">High — set <code>"stream": true</code></td>
+        </tr>
+        <tr>
+          <td><strong>Provider load / time of day</strong></td>
+          <td>Peak hours add 200–800ms</td>
+          <td class="tag-r">Low — Kong can retry on timeout</td>
+        </tr>
+        <tr>
+          <td><strong>Your geographic distance from provider</strong></td>
+          <td>Cross-continent adds 100–300ms</td>
+          <td class="tag-a">Medium — deploy Kong in nearest region</td>
+        </tr>
+        <tr>
+          <td><strong>Kong geographic placement</strong></td>
+          <td>Local Docker = 0ms; cloud = 5–20ms</td>
+          <td class="tag-g">High — run Kong locally for personal use</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="info-box" style="margin-top:16px;">
+      <strong>Tip:</strong> For personal use, run Kong locally with Docker (<code>docker compose up</code>).
+      This eliminates the network hop entirely — Kong overhead drops to &lt;2ms and you pay nothing for cloud hosting.
+    </div>
+  </div>
+</section>
+
+<!-- ── Subscription Plans ── -->
+<section id="subscriptions">
+  <div class="container">
+    <div class="section-label">Critical Clarification</div>
+    <h2>Your subscription plans and API access are different products</h2>
+    <p class="section-sub">
+      This is the most important thing to understand before building your Kong setup.
+      The $20/mo you pay to Claude and Gemini buys you <strong>web UI access</strong> —
+      not API credits. Kong routes API calls, not web sessions.
+    </p>
+
+    <div class="warn-box">
+      <strong>Claude Pro ($20/mo) and Gemini Advanced ($19.99/mo) cannot be routed through Kong.</strong>
+      These subscriptions give you access to the web interface at claude.ai and gemini.google.com.
+      They do not include API access. Kong is an API gateway — it routes API calls only.
+    </div>
+
+    <div class="sub-card" style="margin-top:24px;">
+      <div class="sc-header">
+        <div class="sc-name" style="color:#d97706;">Anthropic Claude</div>
+        <div class="sc-price">$20/mo — Claude Pro</div>
+      </div>
+      <p>Claude Pro gives you access to Claude.ai — the web interface, Projects, extended context, and priority access. It is a consumer subscription, not an API product.</p>
+      <div class="sub-type-grid">
+        <div class="sub-type web-access">
+          <div class="st-label">What Claude Pro gives you</div>
+          <ul>
+            <li>claude.ai web &amp; mobile app</li>
+            <li>Priority access during high load</li>
+            <li>5× more usage than free tier</li>
+            <li>Projects and file uploads</li>
+            <li><strong>Cannot be used via API</strong></li>
+          </ul>
+        </div>
+        <div class="sub-type api-access">
+          <div class="st-label">What Kong needs (Anthropic API)</div>
+          <ul>
+            <li>Separate account at console.anthropic.com</li>
+            <li>Pay-per-token billing (no flat fee)</li>
+            <li>Sonnet 4.5: ~$3 / 1M input tokens</li>
+            <li>Opus 4: ~$15 / 1M input tokens</li>
+            <li><strong>Independent of your Pro subscription</strong></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="sub-card">
+      <div class="sc-header">
+        <div class="sc-name" style="color:#4285f4;">Google Gemini</div>
+        <div class="sc-price">$19.99/mo — Google One AI Premium</div>
+      </div>
+      <p>Google One AI Premium gives you Gemini Advanced access in the Gemini web app and inside Google Workspace (Docs, Gmail, etc). Like Claude Pro, it's a web subscription.</p>
+      <div class="sub-type-grid">
+        <div class="sub-type web-access">
+          <div class="st-label">What Google One AI Premium gives you</div>
+          <ul>
+            <li>Gemini Advanced at gemini.google.com</li>
+            <li>Gemini in Gmail, Docs, Sheets, Meet</li>
+            <li>2TB Google Drive storage</li>
+            <li>Gemini 2.5 Pro in the web UI</li>
+            <li><strong>Does NOT include paid API credits</strong></li>
+          </ul>
+        </div>
+        <div class="sub-type api-access">
+          <div class="st-label">What Kong needs (Gemini API)</div>
+          <ul>
+            <li>API key from aistudio.google.com (free)</li>
+            <li><strong>Free tier:</strong> Gemini 2.0 Flash — 15 req/min, 1,500/day</li>
+            <li><strong>Free tier:</strong> Gemini 1.5 Pro — 2 req/min, 50/day</li>
+            <li>Paid tier: ~$0.35–1.25 / 1M tokens</li>
+            <li><strong>Independent of your AI Premium subscription</strong></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="ok-box">
+      <strong>Good news on Gemini:</strong> Google AI Studio has a generous free tier for the Gemini API.
+      15 requests/minute and 1,500/day on Gemini 2.0 Flash is enough for personal use —
+      and it's completely free. You don't need to pay anything extra for the API.
+    </div>
+  </div>
+</section>
+
+<!-- ── Strategies ── -->
+<section id="strategies">
+  <div class="container">
+    <div class="section-label">Practical Strategies</div>
+    <h2>Three ways to run this setup for your actual workflow</h2>
+    <p class="section-sub">
+      Now that you know the subscriptions vs. API distinction, here's how to
+      structure your setup depending on how you work.
+    </p>
+
+    <div class="strategy-grid">
+
+      <div class="strategy-card">
+        <div class="s-num">A</div>
+        <h3>Keep subscriptions for manual work, use Kong for programmatic work</h3>
+        <p>
+          Continue using <strong>claude.ai</strong> and <strong>gemini.google.com</strong> directly
+          for your daily chat, code review, and document work — you already paid for those.
+          Point Kong at the <strong>free Google AI Studio API</strong> + <strong>OpenRouter</strong>
+          for all programmatic use: CLI tools, IDE plugins, scripts, automation.
+        </p>
+        <p>
+          This gives you the best of both worlds: full-featured web UIs for interactive sessions,
+          cheap/free API access for automated workflows.
+        </p>
+        <div class="s-cost">API cost: ~$0–5/mo (Google free tier + minimal OpenRouter)</div>
+      </div>
+
+      <div class="strategy-card">
+        <div class="s-num">B</div>
+        <h3>Cancel Claude Pro, redirect $20 to the Anthropic API</h3>
+        <p>
+          If you use Claude primarily through code tools (VS Code, Continue.dev, terminal)
+          rather than the web UI, you likely get more value from $20/mo in API credits than
+          from the Claude Pro subscription.
+        </p>
+        <p>
+          $20/mo on the Anthropic API at claude-sonnet-4-5 pricing (~$3/1M input tokens)
+          buys roughly <strong>6.6 million input tokens/month</strong> — far more than Claude Pro's
+          soft daily cap. Route through Kong to use every dollar efficiently.
+        </p>
+        <div class="s-cost">API cost: $20/mo Anthropic API + free Google AI Studio + OpenRouter overflow</div>
+      </div>
+
+      <div class="strategy-card">
+        <div class="s-num">C</div>
+        <h3>Full consolidation: cancel both subscriptions, go API-only</h3>
+        <p>
+          If your usage is mostly API-driven (IDE plugins, automation, scripts), cancel both
+          subscriptions and put the full $40/mo into a mix of:
+          <strong>Anthropic API</strong>, <strong>Google AI Studio paid tier</strong>, and
+          <strong>OpenRouter</strong> (Kimi 2.7, DeepSeek Flash v4).
+        </p>
+        <p>
+          Kong manages the budget across all providers. You get the latest models,
+          smart routing, and full programmatic control — for roughly the same $40/mo total spend.
+        </p>
+        <div class="s-cost">API cost: ~$40/mo split across Anthropic + Google + OpenRouter via Kong</div>
+      </div>
+
+    </div>
+
+    <h3 style="margin-top:36px;">Which tools actually support the API (and work through Kong)</h3>
+
+    <table class="summary-table">
+      <thead><tr><th>Tool</th><th>Uses API?</th><th>Works through Kong?</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>claude.ai website</strong></td>
+          <td class="tag-r">No — web session only</td>
+          <td class="tag-r">No</td>
+        </tr>
+        <tr>
+          <td><strong>gemini.google.com website</strong></td>
+          <td class="tag-r">No — web session only</td>
+          <td class="tag-r">No</td>
+        </tr>
+        <tr>
+          <td><strong>Continue.dev (VS Code / JetBrains)</strong></td>
+          <td class="tag-g">Yes — OpenAI-compatible</td>
+          <td class="tag-g">Yes — point base URL at Kong</td>
+        </tr>
+        <tr>
+          <td><strong>Cursor IDE</strong></td>
+          <td class="tag-g">Yes — uses Anthropic / OpenAI API</td>
+          <td class="tag-a">Partial — custom base URL in Pro plan</td>
+        </tr>
+        <tr>
+          <td><strong>Aider (terminal)</strong></td>
+          <td class="tag-g">Yes — OpenAI-compatible</td>
+          <td class="tag-g">Yes — set <code>OPENAI_API_BASE</code></td>
+        </tr>
+        <tr>
+          <td><strong>Open WebUI (self-hosted)</strong></td>
+          <td class="tag-g">Yes — OpenAI-compatible</td>
+          <td class="tag-g">Yes — configure custom endpoint</td>
+        </tr>
+        <tr>
+          <td><strong>Obsidian (Copilot plugin)</strong></td>
+          <td class="tag-g">Yes — OpenAI-compatible</td>
+          <td class="tag-g">Yes — set custom base URL in plugin settings</td>
+        </tr>
+        <tr>
+          <td><strong>Python / Node scripts</strong></td>
+          <td class="tag-g">Yes — OpenAI SDK</td>
+          <td class="tag-g">Yes — set <code>base_url="http://localhost:8000/v1"</code></td>
+        </tr>
+        <tr>
+          <td><strong>Claude Code (this tool)</strong></td>
+          <td class="tag-g">Yes — Anthropic API</td>
+          <td class="tag-a">Not directly — uses official Anthropic SDK</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3 style="margin-top:32px;">How to point a tool at Kong</h3>
+    <p>Any OpenAI-compatible tool can be redirected to Kong by changing its base URL:</p>
+
+<pre><span class="c"># Python (openai SDK)</span>
+<span class="v">from</span> openai <span class="v">import</span> OpenAI
+client = OpenAI(
+    base_url=<span class="s">"http://localhost:8000/v1"</span>,
+    api_key=<span class="s">"anything"</span>  <span class="c"># Kong ignores this; it injects the real key</span>
+)
+response = client.chat.completions.create(
+    model=<span class="s">"auto"</span>,          <span class="c"># Kong picks the model</span>
+    messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"Hello"</span>}]
+)
+
+<span class="c"># Aider CLI</span>
+OPENAI_API_BASE=http://localhost:8000/v1 aider --model auto
+
+<span class="c"># Continue.dev config.json</span>
+{
+  <span class="s">"models"</span>: [{
+    <span class="s">"title"</span>: <span class="s">"Smart-Cost (Kong)"</span>,
+    <span class="s">"provider"</span>: <span class="s">"openai"</span>,
+    <span class="s">"model"</span>: <span class="s">"auto"</span>,
+    <span class="s">"apiBase"</span>: <span class="s">"http://localhost:8000/v1"</span>,
+    <span class="s">"apiKey"</span>: <span class="s">"kong"</span>
+  }]
+}
+</pre>
+  </div>
+</section>
+
+<!-- ── Recommendation ── -->
+<section id="recommendation">
+  <div class="container">
+    <div class="section-label">Recommendation</div>
+    <h2>The practical setup for your situation</h2>
+
+    <p>Given you pay $20/mo to Gemini and $20/mo to Claude and want to run all models simultaneously
+    without hitting limits, here's the most pragmatic approach:</p>
+
+    <div style="background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:28px; margin-top:16px;">
+
+      <div style="display:flex; flex-direction:column; gap:16px;">
+
+        <div style="display:flex; gap:14px;">
+          <div style="width:28px; height:28px; border-radius:50%; background:#052e16; border:2px solid var(--green); color:var(--green); font-size:13px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0;">1</div>
+          <div>
+            <div style="font-size:15px; font-weight:600; margin-bottom:4px;">Keep both web subscriptions — use them for manual sessions</div>
+            <p>claude.ai and gemini.google.com are excellent products. Keep using them directly for conversational work, document editing, and anything where the web UI adds value (file uploads, projects, shared threads).</p>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:14px;">
+          <div style="width:28px; height:28px; border-radius:50%; background:#052e16; border:2px solid var(--green); color:var(--green); font-size:13px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0;">2</div>
+          <div>
+            <div style="font-size:15px; font-weight:600; margin-bottom:4px;">Get a free Google AI Studio API key — today</div>
+            <p>Go to <strong>aistudio.google.com</strong>, create a project, generate an API key. The free tier gives you Gemini 2.0 Flash at 1,500 requests/day — plenty for personal programmatic use. This is separate from your $20/mo subscription and costs nothing.</p>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:14px;">
+          <div style="width:28px; height:28px; border-radius:50%; background:#052e16; border:2px solid var(--green); color:var(--green); font-size:13px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0;">3</div>
+          <div>
+            <div style="font-size:15px; font-weight:600; margin-bottom:4px;">Add $5–10/mo to Anthropic API for API-based Claude access</div>
+            <p>Create an account at <strong>console.anthropic.com</strong> and add $10 in API credits. This gives you ~3.3 million tokens on claude-sonnet-4-5 — enough for heavy coding sessions. Your Claude Pro web subscription continues to exist separately.</p>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:14px;">
+          <div style="width:28px; height:28px; border-radius:50%; background:#052e16; border:2px solid var(--green); color:var(--green); font-size:13px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0;">4</div>
+          <div>
+            <div style="font-size:15px; font-weight:600; margin-bottom:4px;">Add an OpenRouter key for Kimi 2.7 and DeepSeek</div>
+            <p>Create an account at <strong>openrouter.ai</strong> and add $5–10. OpenRouter is pay-per-token with no monthly minimum. Use it for overflow, long-context tasks (Kimi), and fast/cheap completions (DeepSeek). At DeepSeek's pricing ($0.14/1M tokens), $5 buys ~35 million tokens.</p>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:14px;">
+          <div style="width:28px; height:28px; border-radius:50%; background:#052e16; border:2px solid var(--green); color:var(--green); font-size:13px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0;">5</div>
+          <div>
+            <div style="font-size:15px; font-weight:600; margin-bottom:4px;">Run Kong locally with Docker — no cloud cost</div>
+            <p><code>docker compose up</code> on your laptop. Zero latency overhead. Zero cloud hosting cost. All three services (Kong, smart-router, frontend) run locally. When your laptop is on, every tool that points at <code>localhost:8000</code> gets smart multi-model routing automatically.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div style="background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:22px; margin-top:20px;">
+      <div style="font-size:13px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.6px; margin-bottom:14px;">Monthly spend summary (recommended setup)</div>
+      <div style="display:flex; flex-direction:column; gap:8px; font-size:14px;">
+        <div style="display:flex; justify-content:space-between;"><span style="color:var(--muted)">Claude Pro (claude.ai manual sessions)</span><span style="font-weight:600;">$20.00</span></div>
+        <div style="display:flex; justify-content:space-between;"><span style="color:var(--muted)">Google One AI Premium (gemini.google.com manual sessions)</span><span style="font-weight:600;">$19.99</span></div>
+        <div style="display:flex; justify-content:space-between;"><span style="color:var(--muted)">Anthropic API credits (Kong → claude-sonnet-4-5)</span><span style="font-weight:600;">~$5–10</span></div>
+        <div style="display:flex; justify-content:space-between;"><span style="color:var(--muted)">Google AI Studio API (Kong → gemini-2.0-flash)</span><span style="font-weight:600; color:var(--green)">Free</span></div>
+        <div style="display:flex; justify-content:space-between;"><span style="color:var(--muted)">OpenRouter (Kimi 2.7, DeepSeek Flash v4 overflow)</span><span style="font-weight:600;">~$2–5</span></div>
+        <div style="display:flex; justify-content:space-between;"><span style="color:var(--muted)">Kong hosting (local Docker)</span><span style="font-weight:600; color:var(--green)">Free</span></div>
+        <div style="display:flex; justify-content:space-between; padding-top:12px; margin-top:4px; border-top:2px solid var(--border); font-size:16px; font-weight:700;">
+          <span>Total</span>
+          <span style="color:var(--green)">~$47–55 / month</span>
+        </div>
+      </div>
+      <p style="font-size:12px; margin-top:12px;">
+        You get four models, no quota errors, one API endpoint for all your tools, and zero cloud hosting cost.
+        The $7–15 over your current $40 buys you programmatic API access that your subscriptions don't include.
+      </p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  Smart-Cost Multi-LLM Orchestrator &mdash;
+  <a href="index.html">Overview</a> &nbsp;·&nbsp;
+  <a href="use-case.html">My $40/mo Setup</a> &nbsp;·&nbsp;
+  <a href="setup.html">Deploy</a> &nbsp;·&nbsp;
+  <a href="frontend/index.html">Live Demo</a> &nbsp;·&nbsp;
+  <a href="https://github.com/rifaterdemsahin/kong-gateway">GitHub</a>
+</footer>
+
+</body>
+</html>
